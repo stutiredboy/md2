@@ -26,7 +26,6 @@ final class DocumentStore: ObservableObject {
 
     private let renderer = MarkdownRenderer()
     private var isLoading = false
-    private var didLoadInitialFile = false
     private var autosaveWorkItem: DispatchWorkItem?
     private let autosaveDelay: TimeInterval = 5
 
@@ -45,21 +44,11 @@ final class DocumentStore: ObservableObject {
         rendered = renderer.render(starterText)
     }
 
-    func newDocument() {
-        setDocumentText(Self.starterMarkdown, fileURL: nil, dirty: false)
-    }
-
-    func openDocument() {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.allowedContentTypes = Self.markdownTypes
-
-        guard panel.runModal() == .OK, let url = panel.url else {
-            return
-        }
-
-        open(url)
+    /// True when this store still holds the untouched starter document, i.e. it
+    /// has never been saved to disk and has no unsaved edits. Such a window can
+    /// be reused to load a freshly opened file instead of spawning a new one.
+    var isReusableEmptyDocument: Bool {
+        fileURL == nil && !isDirty && text == Self.starterMarkdown
     }
 
     @discardableResult
@@ -83,23 +72,6 @@ final class DocumentStore: ObservableObject {
         }
 
         return write(to: url)
-    }
-
-    func loadInitialFileFromArguments() {
-        guard !didLoadInitialFile else { return }
-        didLoadInitialFile = true
-
-        let arguments = CommandLine.arguments.dropFirst()
-        guard let path = arguments.first(where: { !$0.hasPrefix("-") }) else {
-            return
-        }
-
-        let url = URL(fileURLWithPath: path)
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            return
-        }
-
-        open(url)
     }
 
     func jump(to heading: Heading) {
@@ -173,7 +145,7 @@ final class DocumentStore: ObservableObject {
         _ = write(to: fileURL)
     }
 
-    private static var markdownTypes: [UTType] {
+    static var markdownTypes: [UTType] {
         [
             UTType(filenameExtension: "md"),
             UTType(filenameExtension: "markdown"),

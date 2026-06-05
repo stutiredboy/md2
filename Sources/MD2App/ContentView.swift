@@ -6,10 +6,12 @@ struct ContentView: View {
     @ObservedObject var settings: AppSettings
     @State private var mode: EditorMode
     @State private var showsOutline: Bool
+    private let onOpen: () -> Void
 
-    init(document: DocumentStore, settings: AppSettings) {
+    init(document: DocumentStore, settings: AppSettings, onOpen: @escaping () -> Void) {
         self.document = document
         self.settings = settings
+        self.onOpen = onOpen
         _mode = State(initialValue: settings.defaultMode)
         _showsOutline = State(initialValue: settings.showsOutlineByDefault)
     }
@@ -50,7 +52,7 @@ struct ContentView: View {
 
             ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    document.openDocument()
+                    onOpen()
                 } label: {
                     Image(systemName: "folder")
                 }

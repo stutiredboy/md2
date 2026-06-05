@@ -18,24 +18,24 @@ struct MD2Application: App {
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(appDelegate.settings.text(.new)) {
-                    appDelegate.documentStore.newDocument()
+                    appDelegate.newDocument()
                 }
                 .keyboardShortcut("n")
 
                 Button(appDelegate.settings.text(.open)) {
-                    appDelegate.documentStore.openDocument()
+                    appDelegate.openDocument()
                 }
                 .keyboardShortcut("o")
             }
 
             CommandGroup(replacing: .saveItem) {
                 Button(appDelegate.settings.text(.save)) {
-                    appDelegate.documentStore.save()
+                    appDelegate.currentDocumentStore?.save()
                 }
                 .keyboardShortcut("s")
 
                 Button(appDelegate.settings.text(.saveAs)) {
-                    appDelegate.documentStore.saveAs()
+                    appDelegate.currentDocumentStore?.saveAs()
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
             }
