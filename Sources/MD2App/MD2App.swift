@@ -13,28 +13,28 @@ struct MD2Application: App {
 
     var body: some Scene {
         Settings {
-            EmptyView()
+            SettingsView(settings: appDelegate.settings)
         }
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("New") {
+                Button(appDelegate.settings.text(.new)) {
                     appDelegate.documentStore.newDocument()
                 }
                 .keyboardShortcut("n")
 
-                Button("Open...") {
+                Button(appDelegate.settings.text(.open)) {
                     appDelegate.documentStore.openDocument()
                 }
                 .keyboardShortcut("o")
             }
 
             CommandGroup(replacing: .saveItem) {
-                Button("Save") {
+                Button(appDelegate.settings.text(.save)) {
                     appDelegate.documentStore.save()
                 }
                 .keyboardShortcut("s")
 
-                Button("Save As...") {
+                Button(appDelegate.settings.text(.saveAs)) {
                     appDelegate.documentStore.saveAs()
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])

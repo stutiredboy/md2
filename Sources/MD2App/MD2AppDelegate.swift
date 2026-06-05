@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 final class MD2AppDelegate: NSObject, NSApplicationDelegate {
     let documentStore = DocumentStore()
+    let settings = AppSettings()
 
     private var pendingOpenURLs: [URL] = []
     private var window: NSWindow?
@@ -41,7 +42,7 @@ final class MD2AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let contentView = ContentView(document: documentStore)
+        let contentView = ContentView(document: documentStore, settings: settings)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 980, height: 680),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],

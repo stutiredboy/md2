@@ -100,6 +100,7 @@ struct RuntimeAppBundleBuilder {
         let fileManager = FileManager.default
         let contentsURL = bundleURL.appendingPathComponent("Contents", isDirectory: true)
         let macOSURL = contentsURL.appendingPathComponent("MacOS", isDirectory: true)
+        let resourcesURL = contentsURL.appendingPathComponent("Resources", isDirectory: true)
         let bundledExecutableURL = macOSURL.appendingPathComponent("MD2")
 
         if fileManager.fileExists(atPath: bundleURL.path) {
@@ -110,8 +111,13 @@ struct RuntimeAppBundleBuilder {
             at: macOSURL,
             withIntermediateDirectories: true
         )
+        try fileManager.createDirectory(
+            at: resourcesURL,
+            withIntermediateDirectories: true
+        )
 
         try fileManager.copyItem(at: executableURL, to: bundledExecutableURL)
+        try copyIconIfAvailable(to: resourcesURL)
 
         let attributes = try fileManager.attributesOfItem(atPath: executableURL.path)
         if let permissions = attributes[.posixPermissions] {
@@ -128,6 +134,17 @@ struct RuntimeAppBundleBuilder {
         )
     }
 
+    private func copyIconIfAvailable(to resourcesURL: URL) throws {
+        let iconURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            .appendingPathComponent("Resources/AppIcon.icns")
+        guard FileManager.default.fileExists(atPath: iconURL.path) else {
+            return
+        }
+
+        let destinationURL = resourcesURL.appendingPathComponent("AppIcon.icns")
+        try FileManager.default.copyItem(at: iconURL, to: destinationURL)
+    }
+
     private var infoPlist: String {
         """
         <?xml version="1.0" encoding="UTF-8"?>
@@ -139,6 +156,8 @@ struct RuntimeAppBundleBuilder {
             <key>CFBundleDocumentTypes</key>
             <array>
                 <dict>
+                    <key>CFBundleTypeIconFile</key>
+                    <string>AppIcon.icns</string>
                     <key>CFBundleTypeExtensions</key>
                     <array>
                         <string>md</string>
@@ -148,6 +167,12 @@ struct RuntimeAppBundleBuilder {
                     <string>Markdown Document</string>
                     <key>CFBundleTypeRole</key>
                     <string>Editor</string>
+                    <key>LSItemContentTypes</key>
+                    <array>
+                        <string>net.daringfireball.markdown</string>
+                        <string>public.markdown</string>
+                        <string>public.plain-text</string>
+                    </array>
                     <key>LSHandlerRank</key>
                     <string>Alternate</string>
                 </dict>
@@ -156,6 +181,10 @@ struct RuntimeAppBundleBuilder {
             <string>MD2</string>
             <key>CFBundleIdentifier</key>
             <string>dev.codex.md2.debug</string>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
+            <key>CFBundleIconName</key>
+            <string>AppIcon</string>
             <key>CFBundleInfoDictionaryVersion</key>
             <string>6.0</string>
             <key>CFBundleName</key>
@@ -170,6 +199,30 @@ struct RuntimeAppBundleBuilder {
             <string>14.0</string>
             <key>NSHighResolutionCapable</key>
             <true/>
+            <key>UTImportedTypeDeclarations</key>
+            <array>
+                <dict>
+                    <key>UTTypeConformsTo</key>
+                    <array>
+                        <string>public.plain-text</string>
+                        <string>public.text</string>
+                    </array>
+                    <key>UTTypeDescription</key>
+                    <string>Markdown Document</string>
+                    <key>UTTypeIdentifier</key>
+                    <string>net.daringfireball.markdown</string>
+                    <key>UTTypeTagSpecification</key>
+                    <dict>
+                        <key>public.filename-extension</key>
+                        <array>
+                            <string>md</string>
+                            <string>markdown</string>
+                        </array>
+                        <key>public.mime-type</key>
+                        <string>text/markdown</string>
+                    </dict>
+                </dict>
+            </array>
         </dict>
         </plist>
         """

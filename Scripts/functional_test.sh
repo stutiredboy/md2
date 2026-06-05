@@ -64,6 +64,21 @@ echo "== App bundle =="
 Scripts/package_app.sh
 plutil -lint dist/MD2.app/Contents/Info.plist
 test -x dist/MD2.app/Contents/MacOS/MD2
+test -f dist/MD2.app/Contents/Resources/AppIcon.icns
+plutil -p dist/MD2.app/Contents/Info.plist | rg -q 'CFBundleIconFile|LSItemContentTypes|net.daringfireball.markdown'
+handler="$(swift - <<'SWIFT'
+import CoreServices
+import Foundation
+
+let contentType = "net.daringfireball.markdown" as NSString
+let handler = LSCopyDefaultRoleHandlerForContentType(contentType, LSRolesMask.editor)?.takeRetainedValue() as String?
+print(handler ?? "")
+SWIFT
+)"
+if [[ "$handler" != "dev.codex.md2" ]]; then
+    echo "FAIL: Markdown default editor handler is '$handler', expected 'dev.codex.md2'." >&2
+    exit 1
+fi
 
 echo "== swift run launch =="
 health_file="/tmp/md2-functional-health.txt"

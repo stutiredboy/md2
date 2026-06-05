@@ -3,8 +3,16 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var document: DocumentStore
-    @State private var mode: EditorMode = .write
-    @State private var showsOutline = true
+    @ObservedObject var settings: AppSettings
+    @State private var mode: EditorMode
+    @State private var showsOutline: Bool
+
+    init(document: DocumentStore, settings: AppSettings) {
+        self.document = document
+        self.settings = settings
+        _mode = State(initialValue: settings.defaultMode)
+        _showsOutline = State(initialValue: settings.showsOutlineByDefault)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,6 +21,7 @@ struct ContentView: View {
                     OutlineSidebar(
                         headings: document.rendered.outline,
                         selectedHeadingID: document.jumpHeadingID,
+                        settings: settings,
                         onSelect: document.jump(to:)
                     )
                     Divider()
@@ -22,10 +31,13 @@ struct ContentView: View {
             }
 
             Divider()
-            StatusBar(stats: document.rendered.stats, url: document.fileURL)
+            StatusBar(stats: document.rendered.stats, url: document.fileURL, settings: settings)
         }
         .frame(minWidth: 780, minHeight: 540)
         .navigationTitle(document.displayTitle)
+        .onChange(of: document.documentIdentity) { _, _ in
+            applyDefaultPresentation()
+        }
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
                 Button {
@@ -33,47 +45,45 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "sidebar.left")
                 }
-                .help(showsOutline ? "Hide outline" : "Show outline")
+                .help(showsOutline ? settings.text(.hideOutline) : settings.text(.showOutline))
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
-                Button {
-                    document.newDocument()
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                }
-                .help("New")
-
                 Button {
                     document.openDocument()
                 } label: {
                     Image(systemName: "folder")
                 }
-                .help("Open")
+                .help(settings.text(.open))
 
                 Button {
                     document.save()
                 } label: {
                     Image(systemName: "square.and.arrow.down")
                 }
-                .help("Save")
+                .help(settings.text(.save))
 
-                Picker("Mode", selection: $mode) {
+                Picker(settings.text(.mode), selection: $mode) {
                     Image(systemName: "pencil").tag(EditorMode.write)
                     Image(systemName: "doc.richtext").tag(EditorMode.read)
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 92)
-                .help("Write or read")
+                .help(settings.text(.writeOrRead))
             }
         }
         .alert(item: $document.alert) { alert in
             Alert(
                 title: Text(alert.message),
                 message: Text(alert.detail),
-                dismissButton: .default(Text("OK"))
+                dismissButton: .default(Text(settings.text(.ok)))
             )
         }
+    }
+
+    private func applyDefaultPresentation() {
+        mode = settings.defaultMode
+        showsOutline = settings.showsOutlineByDefault
     }
 
     @ViewBuilder
@@ -97,11 +107,12 @@ struct ContentView: View {
 private struct OutlineSidebar: View {
     let headings: [Heading]
     let selectedHeadingID: String?
+    let settings: AppSettings
     let onSelect: (Heading) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Outline")
+            Text(settings.text(.outline))
                 .font(.headline)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 14)
@@ -109,7 +120,7 @@ private struct OutlineSidebar: View {
                 .padding(.bottom, 8)
 
             if headings.isEmpty {
-                Text("No headings")
+                Text(settings.text(.noHeadings))
                     .font(.callout)
                     .foregroundStyle(.tertiary)
                     .padding(14)
@@ -142,13 +153,14 @@ private struct OutlineSidebar: View {
 private struct StatusBar: View {
     let stats: DocumentStats
     let url: URL?
+    let settings: AppSettings
 
     var body: some View {
         HStack(spacing: 14) {
-            Text("\(stats.words) words")
-            Text("\(stats.characters) chars")
-            Text("\(stats.lines) lines")
-            Text("\(stats.readingMinutes) min read")
+            Text("\(stats.words) \(settings.text(.words))")
+            Text("\(stats.characters) \(settings.text(.chars))")
+            Text("\(stats.lines) \(settings.text(.lines))")
+            Text("\(stats.readingMinutes) \(settings.text(.minRead))")
 
             Spacer()
 

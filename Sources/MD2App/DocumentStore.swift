@@ -21,6 +21,7 @@ final class DocumentStore: ObservableObject {
     @Published var alert: DocumentAlert?
     @Published var jumpLine: Int?
     @Published var jumpHeadingID: String?
+    @Published private(set) var documentIdentity = UUID()
 
     private let renderer = MarkdownRenderer()
     private var isLoading = false
@@ -130,6 +131,7 @@ final class DocumentStore: ObservableObject {
         fileURL = newFileURL
         isDirty = dirty
         rendered = renderer.render(newText)
+        documentIdentity = UUID()
         isLoading = false
     }
 

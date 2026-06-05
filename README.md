@@ -18,6 +18,8 @@ MD2 keeps the first version intentionally compact:
 - Standard macOS open/save panels.
 - Word, character, line, and reading-time status.
 - Built-in rendering for headings, paragraphs, emphasis, links, images, blockquotes, horizontal rules, ordered/unordered/task lists, tables, fenced code, YAML front matter, and `[TOC]`.
+- App settings for language, default open mode, and default outline visibility.
+- Markdown file type declaration for `.md` and `.markdown` files when packaged.
 
 See [Docs/MarkdownSupport.md](Docs/MarkdownSupport.md) for the tested Markdown/Typora support matrix.
 
