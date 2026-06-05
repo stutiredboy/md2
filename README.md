@@ -49,6 +49,16 @@ Run the full local verification suite:
 Scripts/functional_test.sh
 ```
 
+## macOS "已损坏" 提示
+
+从 GitHub Release 下载的 app 未经 Apple 签名和公证，macOS Gatekeeper 会阻止打开并提示"已损坏"。运行以下命令即可解除：
+
+```sh
+xattr -cr /Applications/Markdown2.app
+```
+
+然后在系统设置 → 隐私与安全性中点击"仍要打开"，或直接双击打开即可。
+
 ## Test
 
 ```sh
