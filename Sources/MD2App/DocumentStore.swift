@@ -11,6 +11,7 @@ final class DocumentStore: ObservableObject {
             rendered = renderer.render(text)
             if !isLoading {
                 isDirty = true
+                scheduleAutosaveIfNeeded()
             }
         }
     }
@@ -26,6 +27,8 @@ final class DocumentStore: ObservableObject {
     private let renderer = MarkdownRenderer()
     private var isLoading = false
     private var didLoadInitialFile = false
+    private var autosaveWorkItem: DispatchWorkItem?
+    private let autosaveDelay: TimeInterval = 5
 
     var baseURL: URL? {
         fileURL?.deletingLastPathComponent()
@@ -59,25 +62,27 @@ final class DocumentStore: ObservableObject {
         open(url)
     }
 
-    func save() {
+    @discardableResult
+    func save() -> Bool {
         if let fileURL {
-            write(to: fileURL)
+            return write(to: fileURL)
         } else {
-            saveAs()
+            return saveAs()
         }
     }
 
-    func saveAs() {
+    @discardableResult
+    func saveAs() -> Bool {
         let panel = NSSavePanel()
         panel.allowedContentTypes = Self.markdownTypes
         panel.canCreateDirectories = true
         panel.nameFieldStringValue = fileURL?.lastPathComponent ?? "Untitled.md"
 
         guard panel.runModal() == .OK, let url = panel.url else {
-            return
+            return false
         }
 
-        write(to: url)
+        return write(to: url)
     }
 
     func loadInitialFileFromArguments() {
@@ -115,17 +120,24 @@ final class DocumentStore: ObservableObject {
         }
     }
 
-    private func write(to url: URL) {
+    @discardableResult
+    private func write(to url: URL) -> Bool {
         do {
+            autosaveWorkItem?.cancel()
+            autosaveWorkItem = nil
             try text.write(to: url, atomically: true, encoding: .utf8)
             fileURL = url
             isDirty = false
+            return true
         } catch {
             alert = DocumentAlert(message: "Could not save \(url.lastPathComponent).", detail: error.localizedDescription)
+            return false
         }
     }
 
     private func setDocumentText(_ newText: String, fileURL newFileURL: URL?, dirty: Bool) {
+        autosaveWorkItem?.cancel()
+        autosaveWorkItem = nil
         isLoading = true
         text = newText
         fileURL = newFileURL
@@ -133,6 +145,32 @@ final class DocumentStore: ObservableObject {
         rendered = renderer.render(newText)
         documentIdentity = UUID()
         isLoading = false
+    }
+
+    private func scheduleAutosaveIfNeeded() {
+        guard fileURL != nil else {
+            autosaveWorkItem?.cancel()
+            autosaveWorkItem = nil
+            return
+        }
+
+        autosaveWorkItem?.cancel()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                self?.autosaveNow()
+            }
+        }
+        autosaveWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + autosaveDelay, execute: workItem)
+    }
+
+    private func autosaveNow() {
+        guard let fileURL, isDirty else {
+            return
+        }
+
+        _ = write(to: fileURL)
     }
 
     private static var markdownTypes: [UTType] {

@@ -140,7 +140,7 @@ public struct MarkdownRenderer: Sendable {
             if lines[index].trimmedMarkdownLine.hasPrefix(marker) {
                 let languageClass = language.isEmpty ? "" : " class=\"language-\(escapeAttribute(language))\""
                 return (
-                    "<pre><code\(languageClass)>\(escapeHTML(code.joined(separator: "\n")))</code></pre>",
+                    "<pre><code\(languageClass)>\(SyntaxHighlighter.highlightedHTML(for: code.joined(separator: "\n"), language: language))</code></pre>",
                     index + 1
                 )
             }
@@ -151,7 +151,7 @@ public struct MarkdownRenderer: Sendable {
 
         let languageClass = language.isEmpty ? "" : " class=\"language-\(escapeAttribute(language))\""
         return (
-            "<pre><code\(languageClass)>\(escapeHTML(code.joined(separator: "\n")))</code></pre>",
+            "<pre><code\(languageClass)>\(SyntaxHighlighter.highlightedHTML(for: code.joined(separator: "\n"), language: language))</code></pre>",
             index
         )
     }
@@ -676,6 +676,13 @@ public struct MarkdownRenderer: Sendable {
             padding: 0;
             white-space: pre;
         }
+
+        .tok-keyword { color: light-dark(#9d174d, #f472b6); font-weight: 650; }
+        .tok-type { color: light-dark(#0f766e, #5eead4); font-weight: 600; }
+        .tok-string { color: light-dark(#166534, #86efac); }
+        .tok-number { color: light-dark(#7c3aed, #c4b5fd); }
+        .tok-comment { color: var(--muted); font-style: italic; }
+        .tok-function { color: light-dark(#1d4ed8, #93c5fd); }
 
         blockquote {
             color: var(--muted);

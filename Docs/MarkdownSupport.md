@@ -10,6 +10,7 @@ MD2 aims for a compact Typora-like writing and reading flow. It does not claim f
 - Lists: ordered, unordered, and GFM task lists.
 - Tables: GFM pipe tables with left, center, and right alignment.
 - Code: fenced code blocks, indented code blocks, and inline code.
+- Syntax highlighting: lightweight keyword/type/string/comment/number/function highlighting for Python, Java, Rust, C++, C, shell, Perl, Go, Swift, JavaScript, and TypeScript code fences.
 - Inline styles: strong, emphasis, strong-emphasis, strikethrough.
 - Links and images, including optional title text.
 - Autolinks such as `<https://example.com>`.
@@ -25,7 +26,7 @@ MD2 aims for a compact Typora-like writing and reading flow. It does not claim f
 - MathJax/LaTeX rendering.
 - Mermaid, flowchart.js, and sequence diagrams.
 - Footnotes.
-- Full syntax highlighting beyond preserving the code block language class.
+- Semantic syntax analysis, compiler-aware highlighting, and language-server features.
 - Typora image upload, drag/drop insertion, image resize UI, and configurable image root paths.
 - Import/export formats such as PDF, DOCX, LaTeX, Epub.
 - Focus mode, typewriter mode, auto-pairing, and custom theme management.

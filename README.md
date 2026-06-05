@@ -16,8 +16,9 @@ MD2 keeps the first version intentionally compact:
 - Live-rendered HTML reading mode.
 - Outline sidebar generated from headings.
 - Standard macOS open/save panels.
+- Debounced autosave for saved documents, plus close/quit confirmation for unsaved changes.
 - Word, character, line, and reading-time status.
-- Built-in rendering for headings, paragraphs, emphasis, links, images, blockquotes, horizontal rules, ordered/unordered/task lists, tables, fenced code, YAML front matter, and `[TOC]`.
+- Built-in rendering for headings, paragraphs, emphasis, links, images, blockquotes, horizontal rules, ordered/unordered/task lists, tables, fenced code with lightweight syntax highlighting, YAML front matter, and `[TOC]`.
 - App settings for language, default open mode, and default outline visibility.
 - Markdown file type declaration for `.md` and `.markdown` files when packaged.
 

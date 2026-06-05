@@ -39,6 +39,10 @@ struct MarkdownEditorView: NSViewRepresentable {
         MarkdownTextStyler.apply(to: textView)
 
         scrollView.documentView = textView
+        DispatchQueue.main.async {
+            textView.window?.makeFirstResponder(textView)
+        }
+
         return scrollView
     }
 

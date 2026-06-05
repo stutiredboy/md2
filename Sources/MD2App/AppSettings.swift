@@ -95,6 +95,10 @@ enum L10nKey: String {
     case showOutlineByDefault
     case general
     case preferences
+    case unsavedChangesTitle
+    case unsavedChangesMessage
+    case cancel
+    case dontSave
 }
 
 enum L10n {
@@ -133,7 +137,11 @@ enum L10n {
         .defaultOpenMode: "Default Open Mode",
         .showOutlineByDefault: "Show Outline by Default",
         .general: "General",
-        .preferences: "Settings"
+        .preferences: "Settings",
+        .unsavedChangesTitle: "Save changes before closing?",
+        .unsavedChangesMessage: "This document has unsaved changes.",
+        .cancel: "Cancel",
+        .dontSave: "Don't Save"
     ]
 
     private static let zhHans: [L10nKey: String] = [
@@ -162,6 +170,10 @@ enum L10n {
         .defaultOpenMode: "默认打开模式",
         .showOutlineByDefault: "默认显示大纲",
         .general: "通用",
-        .preferences: "设置"
+        .preferences: "设置",
+        .unsavedChangesTitle: "关闭前保存更改？",
+        .unsavedChangesMessage: "当前文档还有未保存的更改。",
+        .cancel: "取消",
+        .dontSave: "不保存"
     ]
 }

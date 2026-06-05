@@ -3,7 +3,7 @@ import MD2AppSupport
 import SwiftUI
 
 @MainActor
-final class MD2AppDelegate: NSObject, NSApplicationDelegate {
+final class MD2AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let documentStore = DocumentStore()
     let settings = AppSettings()
 
@@ -52,6 +52,7 @@ final class MD2AppDelegate: NSObject, NSApplicationDelegate {
         window.title = documentStore.displayTitle
         window.center()
         window.isReleasedWhenClosed = false
+        window.delegate = self
         window.contentView = NSHostingView(rootView: contentView)
         window.makeKeyAndOrderFront(nil)
         self.window = window
@@ -62,5 +63,36 @@ final class MD2AppDelegate: NSObject, NSApplicationDelegate {
 
         pendingOpenURLs.removeAll()
         documentStore.open(firstURL)
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        confirmDiscardOrSaveIfNeeded()
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        confirmDiscardOrSaveIfNeeded() ? .terminateNow : .terminateCancel
+    }
+
+    private func confirmDiscardOrSaveIfNeeded() -> Bool {
+        guard documentStore.isDirty else {
+            return true
+        }
+
+        let alert = NSAlert()
+        alert.messageText = settings.text(.unsavedChangesTitle)
+        alert.informativeText = settings.text(.unsavedChangesMessage)
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: settings.text(.save))
+        alert.addButton(withTitle: settings.text(.cancel))
+        alert.addButton(withTitle: settings.text(.dontSave))
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            return documentStore.save()
+        case .alertSecondButtonReturn:
+            return false
+        default:
+            return true
+        }
     }
 }

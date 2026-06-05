@@ -30,7 +30,9 @@ struct MarkdownRendererTests {
         #expect(document.html.contains(#"<input type="checkbox" disabled checked>"#))
         #expect(document.html.contains("<table>"))
         #expect(document.html.contains("<code>1</code>"))
-        #expect(document.html.contains(#"<code class="language-swift">let value = &quot;&lt;safe&gt;&quot;</code>"#))
+        #expect(document.html.contains(#"<code class="language-swift">"#))
+        #expect(document.html.contains(#"<span class="tok-keyword">let</span> value ="#))
+        #expect(document.html.contains(#"<span class="tok-string">&quot;&lt;safe&gt;&quot;</span>"#))
     }
 
     @Test func rendersTableOfContentsFromHeadings() {
