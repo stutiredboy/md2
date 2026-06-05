@@ -1,3 +1,0 @@
-module MD2AppSupport {
-    header "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/include/MD2AppSupport-Swift.h"
-}
