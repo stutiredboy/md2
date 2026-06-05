@@ -188,17 +188,19 @@ struct RuntimeAppBundleBuilder {
             <key>CFBundleInfoDictionaryVersion</key>
             <string>6.0</string>
             <key>CFBundleName</key>
-            <string>MD2</string>
+            <string>Markdown2</string>
             <key>CFBundlePackageType</key>
             <string>APPL</string>
             <key>CFBundleShortVersionString</key>
-            <string>0.1.0</string>
+            <string>0.0.0-dev</string>
             <key>CFBundleVersion</key>
-            <string>1</string>
+            <string>0.0.0-dev</string>
             <key>LSMinimumSystemVersion</key>
             <string>14.0</string>
             <key>NSHighResolutionCapable</key>
             <true/>
+            <key>NSHumanReadableCopyright</key>
+            <string>Copyright © 2026 stutiredboy</string>
             <key>UTImportedTypeDeclarations</key>
             <array>
                 <dict>

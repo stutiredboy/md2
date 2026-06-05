@@ -45,11 +45,34 @@ struct LaunchActivationControllerTests {
         #expect(manager.activateCount == 2 + (LaunchActivationController.retryDelays.count * 2))
         #expect(manager.orderVisibleWindowsFrontCount == 1 + LaunchActivationController.retryDelays.count)
     }
+
+    @Test func activateAfterLaunchStopsRetryingOnceActive() {
+        let manager = FakeActivationManager(policy: .regular)
+        var scheduled: [(TimeInterval, @MainActor () -> Void)] = []
+        let controller = LaunchActivationController(manager: manager) { delay, action in
+            scheduled.append((delay, action))
+        }
+
+        controller.activateAfterLaunch()
+        #expect(manager.activateCount == 2)
+
+        // App is now frontmost; subsequent retries must not re-activate it or
+        // they would steal focus back after the user switches to another app.
+        manager.isActive = true
+
+        for item in scheduled {
+            item.1()
+        }
+
+        #expect(manager.activateCount == 2)
+        #expect(manager.orderVisibleWindowsFrontCount == 1)
+    }
 }
 
 @MainActor
 private final class FakeActivationManager: AppActivationManaging {
     private(set) var activationPolicy: NSApplication.ActivationPolicy
+    var isActive = false
     private(set) var policyChanges: [NSApplication.ActivationPolicy] = []
     private(set) var unhideCount = 0
     private(set) var orderVisibleWindowsFrontCount = 0

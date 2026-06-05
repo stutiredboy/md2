@@ -2,11 +2,26 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="MD2"
-APP_DIR="$ROOT_DIR/dist/$APP_NAME.app"
+APP_NAME="MD2"          # SPM product / executable name inside the bundle
+DISPLAY_NAME="Markdown2" # CFBundleName and the distributed .app/.dmg file name
+APP_DIR="$ROOT_DIR/dist/$DISPLAY_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
+
+# Derive the marketing version from the build tag so the About panel matches
+# the GitHub release. Priority: explicit MD2_VERSION, then the CI ref name
+# (e.g. "v0.2.0"), then `git describe`. The leading "v" is stripped.
+VERSION_RAW="${MD2_VERSION:-${GITHUB_REF_NAME:-}}"
+if [ -z "$VERSION_RAW" ]; then
+    VERSION_RAW="$(git -C "$ROOT_DIR" describe --tags --always 2>/dev/null || true)"
+fi
+VERSION="${VERSION_RAW#v}"
+if [ -z "$VERSION" ]; then
+    VERSION="0.0.0-dev"
+fi
+
+COPYRIGHT="Copyright © 2026 stutiredboy"
 
 cd "$ROOT_DIR"
 swift build -c release --product "$APP_NAME"
@@ -59,17 +74,19 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>$APP_NAME</string>
+    <string>$DISPLAY_NAME</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>$VERSION</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>$VERSION</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>$COPYRIGHT</string>
     <key>UTImportedTypeDeclarations</key>
     <array>
         <dict>

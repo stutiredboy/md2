@@ -5,6 +5,7 @@ import Foundation
 @MainActor
 public protocol AppActivationManaging: AnyObject {
     var activationPolicy: NSApplication.ActivationPolicy { get }
+    var isActive: Bool { get }
 
     func setActivationPolicy(_ policy: NSApplication.ActivationPolicy)
     func unhide()
@@ -24,6 +25,10 @@ public final class NSApplicationActivationManager: AppActivationManaging {
         application.activationPolicy()
     }
 
+    public var isActive: Bool {
+        application.isActive
+    }
+
     public func setActivationPolicy(_ policy: NSApplication.ActivationPolicy) {
         application.setActivationPolicy(policy)
     }
@@ -34,16 +39,7 @@ public final class NSApplicationActivationManager: AppActivationManaging {
 
     public func orderVisibleWindowsFront() {
         for window in application.windows where window.isVisible {
-            let originalLevel = window.level
-            window.level = .floating
             window.makeKeyAndOrderFront(nil)
-            window.orderFrontRegardless()
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                if window.level == .floating {
-                    window.level = originalLevel
-                }
-            }
         }
     }
 
@@ -80,8 +76,21 @@ public struct LaunchActivationController {
     public func activateAfterLaunch() {
         activateNow()
 
+        // The retries exist because SwiftUI may create the main window slightly
+        // after launch, leaving the app behind other windows. Once the app has
+        // actually become frontmost we must stop re-activating it — otherwise a
+        // later retry steals focus back from whatever app the user switched to,
+        // which is the "window-grabbing" bug users see right after launch.
+        let state = ActivationRetryState()
         for delay in Self.retryDelays {
             scheduler(delay) {
+                guard !state.isFinished else { return }
+
+                if manager.isActive {
+                    state.isFinished = true
+                    return
+                }
+
                 activateNow()
             }
         }
@@ -96,6 +105,11 @@ public struct LaunchActivationController {
         manager.activateIgnoringOtherApps()
         manager.orderVisibleWindowsFront()
         manager.activateIgnoringOtherApps()
+    }
+
+    @MainActor
+    private final class ActivationRetryState {
+        var isFinished = false
     }
 
     public static let retryDelays: [TimeInterval] = [0.15, 0.6, 1.2, 2.5, 5.0]
