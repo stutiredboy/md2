@@ -22,6 +22,7 @@
 - **Multi-window support** — each document opens in its own window; untouched starter windows are reused when opening files from Finder or the open panel.
 - **Word, character, line, and reading-time** status bar.
 - **Rich Markdown rendering** — headings, paragraphs, emphasis, links, images, blockquotes, horizontal rules, ordered/unordered/task lists, tables, fenced code with syntax highlighting, YAML front matter, and `[TOC]`.
+- **Math typesetting** — inline `$...$` and display `$$...$$` TeX rendered offline with bundled [KaTeX](https://katex.org/) (no network required), including the mhchem extension for chemistry (`\ce{...}`).
 - **Quick mode switching** — press `Esc` in the editor to switch to preview; `Cmd+double-click` in preview to jump back to edit.
 - **App settings** for language, default open mode, and default outline visibility.
 - **Markdown file type declaration** for `.md` and `.markdown` files when packaged.

@@ -23,7 +23,10 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "MD2Core"
+            name: "MD2Core",
+            resources: [
+                .copy("Resources/katex")
+            ]
         ),
         .target(
             name: "MD2AppSupport"

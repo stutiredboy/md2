@@ -52,6 +52,12 @@ public struct MarkdownRenderer: Sendable {
                 continue
             }
 
+            if let math = mathBlock(from: lines, startIndex: index) {
+                blocks.append(math.html)
+                index = math.nextIndex
+                continue
+            }
+
             if trimmed == "[TOC]" {
                 blocks.append(tableOfContents(outline))
                 index += 1
@@ -179,6 +185,54 @@ public struct MarkdownRenderer: Sendable {
         }
 
         return ("<pre><code>\(escapeHTML(code.joined(separator: "\n")))</code></pre>", index)
+    }
+
+    /// Detects a display math block delimited by `$$`.
+    ///
+    /// Handles both a single line such as `$$a^2 + b^2 = c^2$$` and a multi-line
+    /// block whose opening line starts with `$$` and whose content runs until a
+    /// line ending in `$$`. Returns `nil` when there is no closing `$$`, so the
+    /// text falls through to normal paragraph handling.
+    private func mathBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int)? {
+        let trimmed = lines[startIndex].trimmedMarkdownLine
+        guard trimmed.hasPrefix("$$") else { return nil }
+
+        let afterOpen = String(trimmed.dropFirst(2))
+
+        // Single-line block: `$$ ... $$`
+        if afterOpen.hasSuffix("$$"), afterOpen.count >= 2 {
+            let inner = String(afterOpen.dropLast(2))
+            return (mathDisplayHTML(inner), startIndex + 1)
+        }
+
+        // Multi-line block: collect lines until one ends with `$$`.
+        var content: [String] = []
+        if !afterOpen.isEmpty {
+            content.append(afterOpen)
+        }
+
+        var index = startIndex + 1
+        while index < lines.count {
+            let lineTrimmed = lines[index].trimmedMarkdownLine
+            if lineTrimmed.hasSuffix("$$") {
+                let beforeClose = String(lineTrimmed.dropLast(2))
+                if !beforeClose.isEmpty {
+                    content.append(beforeClose)
+                }
+                return (mathDisplayHTML(content.joined(separator: "\n")), index + 1)
+            }
+
+            content.append(lines[index])
+            index += 1
+        }
+
+        return nil
+    }
+
+    /// Emits a display-math wrapper carrying the raw TeX as HTML-escaped text
+    /// content so the math engine can read it verbatim from the DOM.
+    private func mathDisplayHTML(_ tex: String) -> String {
+        "<div class=\"math math-display\">\(escapeHTML(tex.trimmingCharacters(in: .whitespacesAndNewlines)))</div>"
     }
 
     private func setextHeadingBlock(
@@ -322,6 +376,7 @@ public struct MarkdownRenderer: Sendable {
                 trimmed == "[TOC]" ||
                 trimmed.hasPrefix(">") ||
                 parseListItem(line) != nil ||
+                mathBlock(from: lines, startIndex: index) != nil ||
                 tableBlock(from: lines, startIndex: index) != nil {
                 break
             }
@@ -489,6 +544,18 @@ public struct MarkdownRenderer: Sendable {
             return protect(escapeHTML(String(source[escapedRange])))
         }
 
+        // Inline math: `$...$`. Runs after code and backslash-escape protection so
+        // `$` inside code or an escaped `\$` is never treated as a delimiter. The
+        // opening `$` must not be followed by whitespace, the closing `$` must not
+        // be preceded by whitespace, and `$$` (display math) is excluded.
+        text = replaceMatches(in: text, pattern: #"(?<!\$)\$(?![\s$])((?:[^$])+?)(?<!\s)\$(?!\$)"#) { match, source in
+            guard let range = Range(match.range(at: 1), in: source) else {
+                return matchText(match, in: source)
+            }
+
+            return protect("<span class=\"math math-inline\">\(escapeHTML(String(source[range])))</span>")
+        }
+
         text = replaceMatches(in: text, pattern: #"&(?:#\d+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);"#) { match, source in
             protect(matchText(match, in: source))
         }
@@ -589,6 +656,9 @@ public struct MarkdownRenderer: Sendable {
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+        \(MathAssets.css)
+        </style>
         <style>
         :root {
             color-scheme: light dark;
@@ -753,6 +823,20 @@ public struct MarkdownRenderer: Sendable {
             margin-right: 0.45em;
         }
 
+        /* Typeset math inherits the preview foreground color for light/dark legibility. */
+        .katex { color: var(--text); }
+        .math-display {
+            overflow-x: auto;
+            overflow-y: hidden;
+            margin: 1em 0;
+            text-align: center;
+        }
+        .math-error {
+            color: light-dark(#b91c1c, #f87171);
+            font-family: "SF Mono", Menlo, Consolas, monospace;
+            font-size: 0.9em;
+        }
+
         @media (max-width: 720px) {
             main {
                 padding: 32px 24px 60px;
@@ -764,6 +848,29 @@ public struct MarkdownRenderer: Sendable {
         <main>
         \(body)
         </main>
+        <script>
+        \(MathAssets.javaScript)
+        </script>
+        <script>
+        \(MathAssets.mhchem)
+        </script>
+        <script>
+        (function () {
+            if (typeof katex === "undefined") { return; }
+            var nodes = document.querySelectorAll(".math-inline, .math-display");
+            for (var i = 0; i < nodes.length; i++) {
+                var el = nodes[i];
+                var tex = el.textContent;
+                var display = el.classList.contains("math-display");
+                try {
+                    katex.render(tex, el, { displayMode: display, throwOnError: false });
+                } catch (err) {
+                    el.classList.add("math-error");
+                    el.textContent = tex;
+                }
+            }
+        })();
+        </script>
         </body>
         </html>
         """

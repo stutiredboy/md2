@@ -1,2 +1,8 @@
 .build/
 dist/
+.claude/
+.codex/
+.opencode/
+.DS_Store
+.playwright-mcp/
+openspec/

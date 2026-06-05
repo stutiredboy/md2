@@ -32,6 +32,17 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp ".build/release/$APP_NAME" "$MACOS_DIR/$APP_NAME"
 cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 
+# Copy SwiftPM resource bundles (e.g. MD2_MD2Core.bundle, which carries the
+# bundled KaTeX assets) next to the .app root, where the generated `Bundle.module`
+# accessor looks (Bundle.main.bundleURL/<name>.bundle). Without this the app falls
+# back to a hard-coded local .build path that only exists on the build machine.
+RELEASE_BIN_DIR="$(cd "$ROOT_DIR/.build/release" && pwd)"
+shopt -s nullglob
+for bundle in "$RELEASE_BIN_DIR"/*.bundle; do
+    cp -R "$bundle" "$APP_DIR/$(basename "$bundle")"
+done
+shopt -u nullglob
+
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
