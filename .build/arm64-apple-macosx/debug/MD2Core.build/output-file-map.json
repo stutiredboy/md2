@@ -1,0 +1,61 @@
+{
+  "": {
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/primary.swiftdeps"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2Core/DocumentStats.swift": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/DocumentStats.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/DocumentStats.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/DocumentStats~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/DocumentStats.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/DocumentStats.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2Core/Heading.swift": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Heading.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Heading.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Heading~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Heading.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Heading.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownLine.swift": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownLine.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownLine.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownLine~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownLine.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownLine.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownRenderer.swift": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownRenderer.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownRenderer.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownRenderer~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownRenderer.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/MarkdownRenderer.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2Core/OutlineBuilder.swift": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/OutlineBuilder.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/OutlineBuilder.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/OutlineBuilder~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/OutlineBuilder.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/OutlineBuilder.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2Core/RenderedDocument.swift": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/RenderedDocument.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/RenderedDocument.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/RenderedDocument~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/RenderedDocument.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/RenderedDocument.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2Core/Slugger.swift": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Slugger.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Slugger.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Slugger~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Slugger.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/Slugger.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2Core/String+Markdown.swift": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/String+Markdown.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/String+Markdown.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/String+Markdown~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/String+Markdown.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/debug/MD2Core.build/String+Markdown.dia"
+  }
+}

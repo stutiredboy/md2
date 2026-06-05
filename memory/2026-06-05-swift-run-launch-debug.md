@@ -1,0 +1,9 @@
+# DEBUG REPORT: swift run Launches MD2 Behind Other Apps
+
+- **Symptom:** Running `swift run MD2` opened the GUI process behind the current app, making MD2 effectively unusable. Reproduction showed `frontmost=Codex` after launch.
+- **Root cause:** SwiftPM runs a plain Mach-O executable, not a LaunchServices-managed `.app` bundle. Direct AppKit/SwiftUI activation calls from that process were insufficient to reliably foreground the app on macOS.
+- **Fix:** Added a direct-launch bootstrap. When MD2 is run outside an `.app`, it creates `.build/.../debug/MD2.app`, opens that bundle through `NSWorkspace` with activation enabled, then exits the launcher. The bundled process skips the bootstrap. A later functional pass showed SwiftUI `WindowGroup` could enter `applicationDidFinishLaunching` without creating a usable initial window in this launch path, so the app now creates the main `NSWindow` explicitly in `MD2AppDelegate` and hosts the SwiftUI `ContentView` inside it. Activation retries still run, and visible windows are briefly raised to floating level so they do not remain buried.
+- **Files changed:** `Sources/MD2App/DirectLaunchBootstrap.swift`, `Sources/MD2App/main.swift`, `Sources/MD2App/MD2App.swift`, `Sources/MD2App/MD2AppDelegate.swift`, `Sources/MD2AppSupport/LaunchActivationController.swift`, `Scripts/functional_test.sh`.
+- **Regression test:** `Tests/MD2CoreTests/LaunchActivationControllerTests.swift` verifies activation policy promotion, window ordering, and delayed retries for late SwiftUI windows.
+- **Functional evidence:** `Scripts/functional_test.sh` passed. It runs unit tests, release build, app packaging, Info.plist validation, `swift run MD2 <markdown>` launch, and packaged app launch. In Codex's non-frontmost automation environment, macOS may refuse programmatic foreground stealing, so the test verifies a visible MD2 process plus an app-written visible-window health signal.
+- **Status:** DONE

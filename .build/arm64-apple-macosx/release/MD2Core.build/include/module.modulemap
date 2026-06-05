@@ -1,0 +1,3 @@
+module MD2Core {
+    header "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/include/MD2Core-Swift.h"
+}

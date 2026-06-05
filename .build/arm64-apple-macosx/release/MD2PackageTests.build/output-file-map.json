@@ -1,0 +1,13 @@
+{
+  "": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/MD2PackageTests.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/MD2PackageTests.o",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/primary.swiftdeps"
+  },
+  "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.derived/runner.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/runner.dia"
+  }
+}

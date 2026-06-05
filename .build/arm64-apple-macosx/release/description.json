@@ -1,0 +1,1365 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.xctest/Contents/MacOS/MD2PackageTests",
+      "packagePath" : "/Users/tiredboy/work/github/md2",
+      "productName" : "MD2PackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.MD2App-arm64-apple-macosx-release.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/sources",
+      "importPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/DirectLaunchBootstrap.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/DocumentStore.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/EditorMode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/LaunchHealthReporter.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2App.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2AppDelegate.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownEditorView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownPreviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownTextStyler.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2Core.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2AppSupport.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "MD2App",
+      "moduleOutputPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2App.swiftmodule",
+      "objects" : [
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/ContentView.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DirectLaunchBootstrap.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DocumentStore.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/EditorMode.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/LaunchHealthReporter.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2AppDelegate.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownEditorView.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownPreviewView.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownTextStyler.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-whole-module-optimization",
+        "-num-threads",
+        "10",
+        "-serialize-diagnostics",
+        "-O",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "MD2App_main",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "md2"
+      ],
+      "outputFileMapPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DirectLaunchBootstrap.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DocumentStore.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/EditorMode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/LaunchHealthReporter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2AppDelegate.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownEditorView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownPreviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownTextStyler.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2App.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/ContentView.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/DirectLaunchBootstrap.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/DocumentStore.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/EditorMode.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/LaunchHealthReporter.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2App.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2AppDelegate.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownEditorView.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownPreviewView.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownTextStyler.swift"
+      ],
+      "tempsPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build",
+      "wholeModuleOptimization" : true
+    },
+    "C.MD2AppSupport-arm64-apple-macosx-release.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/sources",
+      "importPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2AppSupport/LaunchActivationController.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MD2AppSupport",
+      "moduleOutputPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2AppSupport.swiftmodule",
+      "objects" : [
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/LaunchActivationController.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-whole-module-optimization",
+        "-num-threads",
+        "10",
+        "-serialize-diagnostics",
+        "-O",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/include/MD2AppSupport-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "md2"
+      ],
+      "outputFileMapPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/LaunchActivationController.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2AppSupport.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/tiredboy/work/github/md2/Sources/MD2AppSupport/LaunchActivationController.swift"
+      ],
+      "tempsPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build",
+      "wholeModuleOptimization" : true
+    },
+    "C.MD2Core-arm64-apple-macosx-release.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/sources",
+      "importPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/DocumentStats.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/Heading.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownLine.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownRenderer.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/OutlineBuilder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/RenderedDocument.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/Slugger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/String+Markdown.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MD2Core",
+      "moduleOutputPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2Core.swiftmodule",
+      "objects" : [
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/DocumentStats.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/Heading.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/MarkdownLine.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/MarkdownRenderer.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/OutlineBuilder.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/RenderedDocument.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/Slugger.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/String+Markdown.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-whole-module-optimization",
+        "-num-threads",
+        "10",
+        "-serialize-diagnostics",
+        "-O",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/include/MD2Core-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "md2"
+      ],
+      "outputFileMapPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/DocumentStats.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/Heading.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/MarkdownLine.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/MarkdownRenderer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/OutlineBuilder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/RenderedDocument.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/Slugger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/String+Markdown.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2Core.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/tiredboy/work/github/md2/Sources/MD2Core/DocumentStats.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2Core/Heading.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownLine.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownRenderer.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2Core/OutlineBuilder.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2Core/RenderedDocument.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2Core/Slugger.swift",
+        "/Users/tiredboy/work/github/md2/Sources/MD2Core/String+Markdown.swift"
+      ],
+      "tempsPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build",
+      "wholeModuleOptimization" : true
+    },
+    "C.MD2CoreTests-arm64-apple-macosx-release.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/sources",
+      "importPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/DocumentStatsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/LaunchActivationControllerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/MarkdownRendererTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/MarkdownSyntaxCoverageTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/OutlineBuilderTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2Core.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2AppSupport.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MD2CoreTests",
+      "moduleOutputPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2CoreTests.swiftmodule",
+      "objects" : [
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/DocumentStatsTests.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/LaunchActivationControllerTests.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/MarkdownRendererTests.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/MarkdownSyntaxCoverageTests.swift.o",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/OutlineBuilderTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-whole-module-optimization",
+        "-num-threads",
+        "10",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/index/store",
+        "-O",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "md2"
+      ],
+      "outputFileMapPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/DocumentStatsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/LaunchActivationControllerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/MarkdownRendererTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/MarkdownSyntaxCoverageTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/OutlineBuilderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2CoreTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/DocumentStatsTests.swift",
+        "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/LaunchActivationControllerTests.swift",
+        "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/MarkdownRendererTests.swift",
+        "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/MarkdownSyntaxCoverageTests.swift",
+        "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/OutlineBuilderTests.swift"
+      ],
+      "tempsPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build",
+      "wholeModuleOptimization" : true
+    },
+    "C.MD2PackageTests-arm64-apple-macosx-release.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/sources",
+      "importPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2CoreTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MD2PackageTests",
+      "moduleOutputPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2PackageTests.swiftmodule",
+      "objects" : [
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-whole-module-optimization",
+        "-num-threads",
+        "10",
+        "-serialize-diagnostics",
+        "-O",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j10",
+        "-DSWIFT_PACKAGE",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/include/MD2PackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "md2"
+      ],
+      "outputFileMapPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules/MD2PackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build",
+      "wholeModuleOptimization" : true
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "MD2App" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MD2App",
+      "-package-name",
+      "md2",
+      "-c",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/ContentView.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/DirectLaunchBootstrap.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/DocumentStore.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/EditorMode.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/LaunchHealthReporter.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2App.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2AppDelegate.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownEditorView.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownPreviewView.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownTextStyler.swift",
+      "-I",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-whole-module-optimization",
+      "-num-threads",
+      "10",
+      "-serialize-diagnostics",
+      "-O",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "MD2App_main",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "md2",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "MD2AppSupport" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MD2AppSupport",
+      "-package-name",
+      "md2",
+      "-c",
+      "/Users/tiredboy/work/github/md2/Sources/MD2AppSupport/LaunchActivationController.swift",
+      "-I",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-whole-module-optimization",
+      "-num-threads",
+      "10",
+      "-serialize-diagnostics",
+      "-O",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/include/MD2AppSupport-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "md2",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "MD2Core" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MD2Core",
+      "-package-name",
+      "md2",
+      "-c",
+      "/Users/tiredboy/work/github/md2/Sources/MD2Core/DocumentStats.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2Core/Heading.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownLine.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownRenderer.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2Core/OutlineBuilder.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2Core/RenderedDocument.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2Core/Slugger.swift",
+      "/Users/tiredboy/work/github/md2/Sources/MD2Core/String+Markdown.swift",
+      "-I",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-whole-module-optimization",
+      "-num-threads",
+      "10",
+      "-serialize-diagnostics",
+      "-O",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/include/MD2Core-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "md2",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "MD2CoreTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MD2CoreTests",
+      "-package-name",
+      "md2",
+      "-c",
+      "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/DocumentStatsTests.swift",
+      "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/LaunchActivationControllerTests.swift",
+      "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/MarkdownRendererTests.swift",
+      "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/MarkdownSyntaxCoverageTests.swift",
+      "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/OutlineBuilderTests.swift",
+      "-I",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-whole-module-optimization",
+      "-num-threads",
+      "10",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/index/store",
+      "-O",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "md2",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "MD2PackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MD2PackageTests",
+      "-package-name",
+      "md2",
+      "-c",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.derived/runner.swift",
+      "-I",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-whole-module-optimization",
+      "-num-threads",
+      "10",
+      "-serialize-diagnostics",
+      "-O",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j10",
+      "-DSWIFT_PACKAGE",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/include/MD2PackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "md2",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "MD2App" : [
+      "MD2AppSupport",
+      "MD2Core"
+    ],
+    "MD2AppSupport" : [
+
+    ],
+    "MD2Core" : [
+
+    ],
+    "MD2CoreTests" : [
+      "MD2AppSupport",
+      "MD2Core"
+    ],
+    "MD2PackageTests" : [
+      "MD2CoreTests",
+      "MD2AppSupport",
+      "MD2Core"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DirectLaunchBootstrap.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DocumentStore.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/EditorMode.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/LaunchHealthReporter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2AppDelegate.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownEditorView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownPreviewView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownTextStyler.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/LaunchActivationController.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/DocumentStats.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/Heading.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/MarkdownLine.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/MarkdownRenderer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/OutlineBuilder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/RenderedDocument.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/Slugger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/String+Markdown.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2.product/Objects.LinkFileList"
+    },
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/DirectLaunchBootstrap.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/DocumentStore.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/EditorMode.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/LaunchHealthReporter.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2App.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2AppDelegate.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownEditorView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownPreviewView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownTextStyler.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/sources"
+    },
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2AppSupport/LaunchActivationController.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/sources"
+    },
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/DocumentStats.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/Heading.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownLine.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/MarkdownRenderer.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/OutlineBuilder.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/RenderedDocument.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/Slugger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Sources/MD2Core/String+Markdown.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/sources"
+    },
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/DocumentStatsTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/LaunchActivationControllerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/MarkdownRendererTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/MarkdownSyntaxCoverageTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/Tests/MD2CoreTests/OutlineBuilderTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/sources"
+    },
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/sources"
+    },
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2AppSupport.build/LaunchActivationController.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/DocumentStats.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/Heading.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/MarkdownLine.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/MarkdownRenderer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/OutlineBuilder.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/RenderedDocument.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/Slugger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2Core.build/String+Markdown.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/DocumentStatsTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/LaunchActivationControllerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/MarkdownRendererTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/MarkdownSyntaxCoverageTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2CoreTests.build/OutlineBuilderTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.build/runner.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2PackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

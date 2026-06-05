@@ -1,0 +1,67 @@
+{
+  "": {
+    "dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App.d",
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App.o",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/primary.swiftdeps"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/ContentView.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/ContentView.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/ContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/ContentView.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/ContentView.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/DirectLaunchBootstrap.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DirectLaunchBootstrap.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DirectLaunchBootstrap~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DirectLaunchBootstrap.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DirectLaunchBootstrap.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/DocumentStore.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DocumentStore.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DocumentStore~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DocumentStore.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/DocumentStore.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/EditorMode.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/EditorMode.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/EditorMode~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/EditorMode.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/EditorMode.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/LaunchHealthReporter.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/LaunchHealthReporter.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/LaunchHealthReporter~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/LaunchHealthReporter.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/LaunchHealthReporter.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2App.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2App.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/MD2AppDelegate.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2AppDelegate.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2AppDelegate~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2AppDelegate.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MD2AppDelegate.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownEditorView.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownEditorView.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownEditorView~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownEditorView.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownEditorView.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownPreviewView.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownPreviewView.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownPreviewView~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownPreviewView.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownPreviewView.dia"
+  },
+  "/Users/tiredboy/work/github/md2/Sources/MD2App/MarkdownTextStyler.swift": {
+    "object": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownTextStyler.swift.o",
+    "swiftmodule": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownTextStyler~partial.swiftmodule",
+    "swift-dependencies": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownTextStyler.swiftdeps",
+    "diagnostics": "/Users/tiredboy/work/github/md2/.build/arm64-apple-macosx/release/MD2App.build/MarkdownTextStyler.dia"
+  }
+}
