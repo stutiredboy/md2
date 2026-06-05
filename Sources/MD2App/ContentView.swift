@@ -94,13 +94,15 @@ struct ContentView: View {
         case .write:
             MarkdownEditorView(
                 text: $document.text,
-                jumpLine: $document.jumpLine
+                jumpLine: $document.jumpLine,
+                onEnterPreview: { mode = .read }
             )
         case .read:
             MarkdownPreviewView(
                 html: document.rendered.html,
                 baseURL: document.baseURL,
-                jumpHeadingID: $document.jumpHeadingID
+                jumpHeadingID: $document.jumpHeadingID,
+                onEnterEdit: { mode = .write }
             )
         }
     }

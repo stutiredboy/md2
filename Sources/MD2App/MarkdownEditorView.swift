@@ -4,6 +4,8 @@ import SwiftUI
 struct MarkdownEditorView: NSViewRepresentable {
     @Binding var text: String
     @Binding var jumpLine: Int?
+    /// Called when the user presses Esc, requesting a switch to preview mode.
+    var onEnterPreview: () -> Void = {}
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSScrollView()
@@ -47,6 +49,7 @@ struct MarkdownEditorView: NSViewRepresentable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        context.coordinator.onEnterPreview = onEnterPreview
         guard let textView = scrollView.documentView as? NSTextView else { return }
 
         if textView.string != text, !context.coordinator.isApplyingStyle {
@@ -65,7 +68,9 @@ struct MarkdownEditorView: NSViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text)
+        let coordinator = Coordinator(text: $text)
+        coordinator.onEnterPreview = onEnterPreview
+        return coordinator
     }
 
     private func scroll(to line: Int, in textView: NSTextView) {
@@ -92,9 +97,21 @@ struct MarkdownEditorView: NSViewRepresentable {
     final class Coordinator: NSObject, NSTextViewDelegate {
         @Binding var text: String
         var isApplyingStyle = false
+        var onEnterPreview: () -> Void = {}
 
         init(text: Binding<String>) {
             _text = text
+        }
+
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            // Esc maps to cancelOperation: in the standard key bindings. Intercept
+            // it here so the editor switches to preview instead of triggering the
+            // text view's default completion behaviour.
+            if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                onEnterPreview()
+                return true
+            }
+            return false
         }
 
         func textDidChange(_ notification: Notification) {
