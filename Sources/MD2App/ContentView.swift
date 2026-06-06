@@ -6,6 +6,13 @@ struct ContentView: View {
     @ObservedObject var settings: AppSettings
     @State private var mode: EditorMode
     @State private var showsOutline: Bool
+    /// Latest top-visible source line reported by the editor, used to anchor a
+    /// switch into preview mode.
+    @State private var editorAnchorLine = 1
+    /// Latest heading id at the top of the preview viewport (and its scroll
+    /// fraction fallback), used to anchor a switch into edit mode.
+    @State private var previewAnchorID: String?
+    @State private var previewAnchorFraction = 0.0
     private let onOpen: () -> Void
 
     init(document: DocumentStore, settings: AppSettings, onOpen: @escaping () -> Void) {
@@ -65,7 +72,10 @@ struct ContentView: View {
                 }
                 .help(settings.text(.save))
 
-                Picker(settings.text(.mode), selection: $mode) {
+                Picker(
+                    settings.text(.mode),
+                    selection: Binding(get: { mode }, set: { requestMode($0) })
+                ) {
                     Image(systemName: "pencil").tag(EditorMode.write)
                     Image(systemName: "doc.richtext").tag(EditorMode.read)
                 }
@@ -88,6 +98,50 @@ struct ContentView: View {
         showsOutline = settings.showsOutlineByDefault
     }
 
+    /// Switches mode, first resolving the outgoing view's anchor to a target on
+    /// the incoming view. The anchor is set on `document` *before* `mode` flips,
+    /// so the freshly-created destination view already knows where to land when
+    /// it loads — critical for the preview, whose page load can be slow when
+    /// heavy diagram/math engines are inlined.
+    private func requestMode(_ newMode: EditorMode) {
+        guard newMode != mode else { return }
+        let outline = document.rendered.outline
+
+        switch newMode {
+        case .read:
+            // Write → Read: anchor the preview on the section the editor was in.
+            let heading = outline.heading(atOrAbove: editorAnchorLine)
+            if let heading {
+                document.jumpFraction = nil
+                document.jumpHeadingID = heading.id
+            } else {
+                document.jumpHeadingID = nil
+                document.jumpFraction = fraction(
+                    forLine: editorAnchorLine,
+                    totalLines: totalLineCount
+                )
+            }
+        case .write:
+            // Read → Write: anchor the editor on the section the preview showed.
+            let heading = previewAnchorID.flatMap(outline.heading(forID:))
+            if let heading {
+                document.jumpFraction = nil
+                document.jumpLine = heading.line
+            } else {
+                document.jumpLine = nil
+                document.jumpFraction = previewAnchorFraction
+            }
+        }
+
+        mode = newMode
+    }
+
+    private var totalLineCount: Int {
+        document.text.reduce(into: 1) { count, character in
+            if character == "\n" { count += 1 }
+        }
+    }
+
     @ViewBuilder
     private var editorSurface: some View {
         switch mode {
@@ -95,14 +149,21 @@ struct ContentView: View {
             MarkdownEditorView(
                 text: $document.text,
                 jumpLine: $document.jumpLine,
-                onEnterPreview: { mode = .read }
+                jumpFraction: $document.jumpFraction,
+                onAnchorLineChange: { editorAnchorLine = $0 },
+                onEnterPreview: { requestMode(.read) }
             )
         case .read:
             MarkdownPreviewView(
                 html: document.rendered.html,
                 baseURL: document.baseURL,
                 jumpHeadingID: $document.jumpHeadingID,
-                onEnterEdit: { mode = .write }
+                jumpFraction: $document.jumpFraction,
+                onAnchorChange: { id, fraction in
+                    previewAnchorID = id
+                    previewAnchorFraction = fraction
+                },
+                onEnterEdit: { requestMode(.write) }
             )
         }
     }

@@ -22,6 +22,7 @@ final class DocumentStore: ObservableObject {
     @Published var alert: DocumentAlert?
     @Published var jumpLine: Int?
     @Published var jumpHeadingID: String?
+    @Published var jumpFraction: Double?
     @Published private(set) var documentIdentity = UUID()
 
     private let renderer = MarkdownRenderer()
@@ -75,6 +76,7 @@ final class DocumentStore: ObservableObject {
     }
 
     func jump(to heading: Heading) {
+        jumpFraction = nil
         jumpLine = heading.line
         jumpHeadingID = heading.id
     }

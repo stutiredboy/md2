@@ -7,3 +7,6 @@ dist/
 .playwright-mcp/
 openspec/
 memory/
+
+# Transient preview files written next to documents during Read-mode rendering
+.md2-preview-*.html
