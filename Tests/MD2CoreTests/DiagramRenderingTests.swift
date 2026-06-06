@@ -13,9 +13,32 @@ struct DiagramRenderingTests {
 
         let document = MarkdownRenderer().render(markdown)
 
-        #expect(document.html.contains(#"<div class="diagram diagram-mermaid">graph TD; A--&gt;B;</div>"#))
+        // The placeholder starts in the source-hiding pending state and carries
+        // the verbatim (HTML-escaped) source for the engine to read.
+        #expect(document.html.contains(#"<div class="diagram diagram-mermaid diagram-pending">graph TD; A--&gt;B;</div>"#))
         // The diagram source is not emitted as a code block.
         #expect(!document.html.contains("language-mermaid"))
+    }
+
+    @Test func diagramPlaceholderStartsPendingWithVerbatimSource() {
+        // Each diagram kind emits the pending state while keeping its source.
+        let cases: [(String, String)] = [
+            ("mermaid", "diagram-mermaid"),
+            ("flow", "diagram-flow"),
+            ("sequence", "diagram-sequence"),
+        ]
+
+        for (info, cssClass) in cases {
+            let document = MarkdownRenderer().render("""
+            ```\(info)
+            graph TD; A-->B;
+            ```
+            """)
+
+            #expect(document.html.contains(#"<div class="diagram \#(cssClass) diagram-pending">"#))
+            // The verbatim source survives so the engine can render it.
+            #expect(document.html.contains("graph TD; A--&gt;B;"))
+        }
     }
 
     @Test func rendersFlowchartPlaceholder() {
@@ -29,7 +52,7 @@ struct DiagramRenderingTests {
 
         let document = MarkdownRenderer().render(markdown)
 
-        #expect(document.html.contains(#"<div class="diagram diagram-flow">"#))
+        #expect(document.html.contains(#"<div class="diagram diagram-flow diagram-pending">"#))
         #expect(document.html.contains("st=&gt;start: Start"))
         #expect(document.html.contains("st-&gt;e"))
     }
@@ -44,7 +67,7 @@ struct DiagramRenderingTests {
 
         let document = MarkdownRenderer().render(markdown)
 
-        #expect(document.html.contains(#"<div class="diagram diagram-sequence">"#))
+        #expect(document.html.contains(#"<div class="diagram diagram-sequence diagram-pending">"#))
         #expect(document.html.contains("Alice-&gt;Bob: Hi"))
         #expect(document.html.contains("Bob--&gt;Alice: Hello"))
     }
@@ -58,7 +81,7 @@ struct DiagramRenderingTests {
 
         let document = MarkdownRenderer().render(markdown)
 
-        #expect(document.html.contains(#"class="diagram diagram-mermaid""#))
+        #expect(document.html.contains(#"class="diagram diagram-mermaid diagram-pending""#))
     }
 
     @Test func diagramSourceIsVerbatimAndNotMarkdownProcessed() {
@@ -73,7 +96,7 @@ struct DiagramRenderingTests {
 
         // The verbatim, HTML-escaped source proves no inline Markdown ran: the
         // underscores/asterisks survive instead of becoming <em>/<strong>.
-        #expect(document.html.contains(#"<div class="diagram diagram-mermaid">graph LR; _a_--&gt;*b*;</div>"#))
+        #expect(document.html.contains(#"<div class="diagram diagram-mermaid diagram-pending">graph LR; _a_--&gt;*b*;</div>"#))
     }
 
     // MARK: Non-diagram fences stay code (3.3 / spec: no interference)
@@ -132,5 +155,26 @@ struct DiagramRenderingTests {
         #expect(document.html.contains(".diagram-sequence"))
         // Defensive guards mirror the math bootstrap.
         #expect(document.html.contains("typeof mermaid"))
+    }
+
+    @Test func bootstrapRevealsEachEngineAndErrorPath() {
+        let document = MarkdownRenderer().render("""
+        ```mermaid
+        graph TD; A-->B;
+        ```
+        """)
+
+        // A shared reveal helper drops the pending state and adds the ready class.
+        #expect(document.html.contains("function reveal(el)"))
+        #expect(document.html.contains(#"el.classList.remove("diagram-pending")"#))
+        #expect(document.html.contains(#"el.classList.add("diagram-ready")"#))
+        // The error/fallback path reveals too, so failures show source, not blank.
+        #expect(document.html.contains("function fail(el, source)"))
+        // Mermaid reveals inside its async render callback.
+        #expect(document.html.contains("el.innerHTML = result.svg;"))
+        // Engines that are unavailable still reveal their source.
+        #expect(document.html.contains(#"if (typeof flowchart === "undefined") { reveal(el); continue; }"#))
+        #expect(document.html.contains(#"if (typeof Diagram === "undefined") { reveal(sel); continue; }"#))
+        #expect(document.html.contains(#"if (typeof mermaid === "undefined")"#))
     }
 }

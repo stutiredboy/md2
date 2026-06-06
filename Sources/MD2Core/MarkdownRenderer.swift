@@ -170,9 +170,12 @@ public struct MarkdownRenderer: Sendable {
 
     /// Emits a diagram placeholder carrying the raw diagram source as
     /// HTML-escaped text content so the client-side engine can read it verbatim
-    /// from the DOM, mirroring ``mathDisplayHTML``.
+    /// from the DOM, mirroring ``mathDisplayHTML``. The placeholder starts in a
+    /// `diagram-pending` state: the source stays machine-readable but is hidden
+    /// from the reader until the engine renders (or fails), avoiding a raw-source
+    /// flash before the SVG arrives.
     private func diagramHTML(kind: DiagramKind, source: String) -> String {
-        "<div class=\"diagram \(kind.cssClass)\">\(escapeHTML(source.trimmingCharacters(in: .newlines)))</div>"
+        "<div class=\"diagram \(kind.cssClass) diagram-pending\">\(escapeHTML(source.trimmingCharacters(in: .newlines)))</div>"
     }
 
     private func indentedCodeBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int)? {
@@ -636,7 +639,14 @@ public struct MarkdownRenderer: Sendable {
                 title = ""
             }
 
-            return "<img src=\"\(source[srcRange])\" alt=\"\(source[altRange])\"\(title)>"
+            let src = String(source[srcRange])
+            let image = "<img src=\"\(src)\" alt=\"\(source[altRange])\"\(title)>"
+            guard let dimensions = imageDimensions(from: src) else {
+                return image
+            }
+
+            let sizedImage = "<img src=\"\(src)\" alt=\"\(source[altRange])\"\(title) width=\"\(dimensions.width)\" height=\"\(dimensions.height)\">"
+            return "<span class=\"image-frame\" style=\"width: \(dimensions.width)px; aspect-ratio: \(dimensions.width) / \(dimensions.height);\">\(sizedImage)</span>"
         }
 
         text = replaceMatches(in: text, pattern: #"\[([^\]]+)\]\((\S+?)(?:\s+&quot;(.+?)&quot;)?\)"#) { match, source in
@@ -660,6 +670,26 @@ public struct MarkdownRenderer: Sendable {
         }
 
         return text
+    }
+
+    /// Infers image dimensions from common placeholder/CDN URL segments such as
+    /// `200x100` or `image-1200x800.png`, allowing the browser to reserve space
+    /// before a remote image succeeds or fails.
+    private func imageDimensions(from escapedURL: String) -> (width: Int, height: Int)? {
+        guard let match = firstMatch(
+            in: escapedURL,
+            pattern: #"(?i)(?:^|[\/._-])(\d{2,5})x(\d{2,5})(?:[\/._?#&-]|$)"#
+        ),
+              let widthRange = Range(match.range(at: 1), in: escapedURL),
+              let heightRange = Range(match.range(at: 2), in: escapedURL),
+              let width = Int(escapedURL[widthRange]),
+              let height = Int(escapedURL[heightRange]),
+              (1...10000).contains(width),
+              (1...10000).contains(height) else {
+            return nil
+        }
+
+        return (width, height)
     }
 
     private func htmlDocument(body: String) -> String {
@@ -799,6 +829,19 @@ public struct MarkdownRenderer: Sendable {
             margin: 1.1em auto;
         }
 
+        .image-frame {
+            display: block;
+            max-width: 100%;
+            margin: 1.1em auto;
+        }
+
+        .image-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            margin: 0;
+        }
+
         hr {
             border: 0;
             border-top: 1px solid var(--border);
@@ -855,6 +898,8 @@ public struct MarkdownRenderer: Sendable {
             margin: 1.1em 0;
             text-align: center;
             overflow-x: auto;
+            opacity: 1;
+            transition: opacity 120ms ease-in;
         }
         .diagram svg {
             max-width: 100%;
@@ -878,6 +923,19 @@ public struct MarkdownRenderer: Sendable {
         .diagram-mermaid rect,
         .diagram-mermaid ellipse,
         .diagram-mermaid polygon { stroke: revert; }
+        /* While its engine has not rendered yet, a diagram hides its raw source
+           (collapsed + transparent) so it never flashes as visible code, and
+           reserves a little height to dampen the jump to the final SVG. */
+        .diagram-pending {
+            opacity: 0;
+            font-size: 0;
+            min-height: 2.5rem;
+            overflow: hidden;
+        }
+        /* Once rendered (or failed), the diagram fades gently into view. */
+        .diagram-ready {
+            opacity: 1;
+        }
         /* On parse failure the raw source is shown instead of a blank diagram. */
         .diagram-error {
             display: block;
@@ -976,43 +1034,55 @@ public struct MarkdownRenderer: Sendable {
         var dark = window.matchMedia
             && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
+        // Drop the source-hiding pending state and fade the diagram in. Called
+        // once an engine has populated the element, on the error/fallback path,
+        // and when an engine is unavailable — so a block is never left blank.
+        function reveal(el) {
+            el.classList.remove("diagram-pending");
+            el.classList.add("diagram-ready");
+        }
+
         function fail(el, source) {
             el.classList.add("diagram-error");
             el.textContent = source;
+            reveal(el);
         }
 
         // flowchart.js — depends on the global `flowchart` (+ Raphael).
-        if (typeof flowchart !== "undefined") {
-            var flows = document.querySelectorAll(".diagram-flow");
-            for (var i = 0; i < flows.length; i++) {
-                var el = flows[i];
-                var source = el.textContent;
-                try {
-                    el.textContent = "";
-                    flowchart.parse(source).drawSVG(el);
-                } catch (err) {
-                    fail(el, source);
-                }
+        var flows = document.querySelectorAll(".diagram-flow");
+        for (var i = 0; i < flows.length; i++) {
+            var el = flows[i];
+            var source = el.textContent;
+            if (typeof flowchart === "undefined") { reveal(el); continue; }
+            try {
+                el.textContent = "";
+                flowchart.parse(source).drawSVG(el);
+                reveal(el);
+            } catch (err) {
+                fail(el, source);
             }
         }
 
         // js-sequence-diagrams — depends on the global `Diagram` (+ Underscore, Raphael).
-        if (typeof Diagram !== "undefined") {
-            var seqs = document.querySelectorAll(".diagram-sequence");
-            for (var j = 0; j < seqs.length; j++) {
-                var sel = seqs[j];
-                var ssource = sel.textContent;
-                try {
-                    sel.textContent = "";
-                    Diagram.parse(ssource).drawSVG(sel, { theme: "simple" });
-                } catch (err) {
-                    fail(sel, ssource);
-                }
+        var seqs = document.querySelectorAll(".diagram-sequence");
+        for (var j = 0; j < seqs.length; j++) {
+            var sel = seqs[j];
+            var ssource = sel.textContent;
+            if (typeof Diagram === "undefined") { reveal(sel); continue; }
+            try {
+                sel.textContent = "";
+                Diagram.parse(ssource).drawSVG(sel, { theme: "simple" });
+                reveal(sel);
+            } catch (err) {
+                fail(sel, ssource);
             }
         }
 
         // Mermaid — self-contained; render explicitly (startOnLoad disabled).
-        if (typeof mermaid !== "undefined") {
+        var mers = document.querySelectorAll(".diagram-mermaid");
+        if (typeof mermaid === "undefined") {
+            for (var u = 0; u < mers.length; u++) { reveal(mers[u]); }
+        } else if (mers.length) {
             try {
                 mermaid.initialize({
                     startOnLoad: false,
@@ -1020,13 +1090,13 @@ public struct MarkdownRenderer: Sendable {
                     securityLevel: "loose"
                 });
             } catch (err) {}
-            var mers = document.querySelectorAll(".diagram-mermaid");
             for (var k = 0; k < mers.length; k++) {
                 (function (el, idx) {
                     var source = el.textContent;
                     try {
                         mermaid.render("md2-mermaid-" + idx, source).then(function (result) {
                             el.innerHTML = result.svg;
+                            reveal(el);
                         }).catch(function () {
                             fail(el, source);
                         });

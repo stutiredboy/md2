@@ -63,4 +63,10 @@ struct MarkdownRendererTests {
         #expect(document.html.contains(#"<img src="images/a&amp;b.png" alt="A&amp;B">"#))
         #expect(!document.html.contains("amp;amp"))
     }
+
+    @Test func infersImageDimensionsFromSizedURLPath() {
+        let document = MarkdownRenderer().render(#"![Sample](https://via.placeholder.com/200x100 "Placeholder image")"#)
+
+        #expect(document.html.contains(#"<span class="image-frame" style="width: 200px; aspect-ratio: 200 / 100;"><img src="https://via.placeholder.com/200x100" alt="Sample" title="Placeholder image" width="200" height="100"></span>"#))
+    }
 }
