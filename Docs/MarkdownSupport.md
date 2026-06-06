@@ -1,6 +1,6 @@
-# MD2 Markdown Support
+# Markdown2 Markdown Support
 
-MD2 aims for a compact Typora-like writing and reading flow. It does not claim full Typora parity; Typora includes product features and external renderers that are outside this first native implementation.
+Markdown2 aims for a compact Typora-like writing and reading flow. It does not claim full Typora parity; Typora includes product features and external renderers that are outside this first native implementation.
 
 ## Verified in Tests
 
@@ -20,7 +20,6 @@ MD2 aims for a compact Typora-like writing and reading flow. It does not claim f
 - `[TOC]` generated from headings.
 - Math: inline TeX `$...$` and display TeX `$$...$$` (single- and multi-line), typeset offline with bundled KaTeX, including the mhchem extension for chemistry expressions such as `\ce{H2SO4}`. Currency text (`$5`), escaped `\$`, and `$` inside code are left literal. Note: KaTeX supports a subset of LaTeX, so commands outside that subset render as an inline error rather than typeset output.
 - CJK text in headings, paragraphs, tables, and inline styles.
-- The course report fixture at `/Users/tiredboy/work/github/ScutMemHomework/论文写作与学术规范/第一次课程作业/三篇论文深度评审报告_独立分析.md`.
 
 ## Not Yet Supported
 

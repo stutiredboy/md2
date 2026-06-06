@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Markdown2</h1>
-  <p><strong>轻量级 macOS 原生 Markdown 编辑器 & 阅读器</strong></p>
+  <p><strong>Markdown Editor Too</strong> — 轻量级 macOS 原生 Markdown 编辑器 & 阅读器</p>
   <p>[中文] <a href="README.md">[English]</a></p>
 
   <p>
@@ -45,20 +45,20 @@
 ## 从源码运行
 
 ```sh
-swift run MD2
+swift run Markdown2
 ```
 
 直接打开文件：
 
 ```sh
-swift run MD2 path/to/file.md
+swift run Markdown2 path/to/file.md
 ```
 
 构建本地 macOS app 包：
 
 ```sh
 Scripts/package_app.sh
-open dist/MD2.app
+open dist/Markdown2.app
 ```
 
 运行完整本地验证套件：

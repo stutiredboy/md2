@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME="MD2"          # SPM product / executable name inside the bundle
+APP_NAME="Markdown2"     # SPM product / executable name inside the bundle
 DISPLAY_NAME="Markdown2" # CFBundleName and the distributed .app/.dmg file name
 APP_DIR="$ROOT_DIR/dist/$DISPLAY_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
@@ -10,9 +10,9 @@ MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
 # Derive the marketing version from the build tag so the About panel matches
-# the GitHub release. Priority: explicit MD2_VERSION, then the CI ref name
+# the GitHub release. Priority: explicit MARKDOWN2_VERSION, then the CI ref name
 # (e.g. "v0.2.0"), then `git describe`. The leading "v" is stripped.
-VERSION_RAW="${MD2_VERSION:-${GITHUB_REF_NAME:-}}"
+VERSION_RAW="${MARKDOWN2_VERSION:-${GITHUB_REF_NAME:-}}"
 if [ -z "$VERSION_RAW" ]; then
     VERSION_RAW="$(git -C "$ROOT_DIR" describe --tags --always 2>/dev/null || true)"
 fi
@@ -32,7 +32,7 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp ".build/release/$APP_NAME" "$MACOS_DIR/$APP_NAME"
 cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 
-# Copy SwiftPM resource bundles (e.g. MD2_MD2Core.bundle, which carries the
+# Copy SwiftPM resource bundles (e.g. Markdown2_MD2Core.bundle, which carries the
 # bundled KaTeX assets) next to the .app root, where the generated `Bundle.module`
 # accessor looks (Bundle.main.bundleURL/<name>.bundle). Without this the app falls
 # back to a hard-coded local .build path that only exists on the build machine.

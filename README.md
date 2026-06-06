@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Markdown2</h1>
-  <p><strong>A lightweight native macOS Markdown editor & reader</strong></p>
+  <p><strong>Markdown Editor Too</strong> — a lightweight native macOS Markdown editor & reader</p>
   <p><a href="README.zh-CN.md">[中文]</a> [English]</p>
 
   <p>
@@ -45,20 +45,20 @@ Download the latest `Markdown2.app` from [Releases](https://github.com/stutiredb
 ## Run from Source
 
 ```sh
-swift run MD2
+swift run Markdown2
 ```
 
 Open a file directly:
 
 ```sh
-swift run MD2 path/to/file.md
+swift run Markdown2 path/to/file.md
 ```
 
 Build a local macOS app bundle:
 
 ```sh
 Scripts/package_app.sh
-open dist/MD2.app
+open dist/Markdown2.app
 ```
 
 Run the full local verification suite:

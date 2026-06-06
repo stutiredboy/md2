@@ -17,7 +17,7 @@ let package = Package(
             targets: ["MD2AppSupport"]
         ),
         .executable(
-            name: "MD2",
+            name: "Markdown2",
             targets: ["MD2App"]
         )
     ],

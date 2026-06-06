@@ -16,7 +16,7 @@ jobs:
 
       - name: Build and package app
         env:
-          MD2_VERSION: ${{ github.ref_name }}
+          MARKDOWN2_VERSION: ${{ github.ref_name }}
         run: bash Scripts/package_app.sh
 
       - name: Create DMG

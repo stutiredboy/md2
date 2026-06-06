@@ -5,7 +5,7 @@ import Foundation
 enum DirectLaunchBootstrap {
     static func relaunchFromAppBundleIfNeeded() -> Bool {
         guard Bundle.main.bundleURL.pathExtension != "app",
-              ProcessInfo.processInfo.environment["MD2_DISABLE_APP_BUNDLE_BOOTSTRAP"] != "1" else {
+              ProcessInfo.processInfo.environment["MARKDOWN2_DISABLE_APP_BUNDLE_BOOTSTRAP"] != "1" else {
             return false
         }
 
@@ -13,7 +13,7 @@ enum DirectLaunchBootstrap {
             let executableURL = try currentExecutableURL()
             let bundleURL = executableURL
                 .deletingLastPathComponent()
-                .appendingPathComponent("MD2.app", isDirectory: true)
+                .appendingPathComponent("Markdown2.app", isDirectory: true)
 
             try RuntimeAppBundleBuilder().build(
                 bundleURL: bundleURL,
@@ -23,7 +23,7 @@ enum DirectLaunchBootstrap {
             try openBundle(bundleURL)
             return true
         } catch {
-            fputs("MD2 could not start as a macOS app: \(error.localizedDescription)\n", stderr)
+            fputs("Markdown2 could not start as a macOS app: \(error.localizedDescription)\n", stderr)
             return false
         }
     }
@@ -53,7 +53,7 @@ enum DirectLaunchBootstrap {
         configuration.activates = true
         configuration.arguments = Array(CommandLine.arguments.dropFirst())
         var environment = ProcessInfo.processInfo.environment
-        environment["MD2_DISABLE_APP_BUNDLE_BOOTSTRAP"] = "1"
+        environment["MARKDOWN2_DISABLE_APP_BUNDLE_BOOTSTRAP"] = "1"
         configuration.environment = environment
 
         let semaphore = DispatchSemaphore(value: 0)
@@ -101,7 +101,7 @@ struct RuntimeAppBundleBuilder {
         let contentsURL = bundleURL.appendingPathComponent("Contents", isDirectory: true)
         let macOSURL = contentsURL.appendingPathComponent("MacOS", isDirectory: true)
         let resourcesURL = contentsURL.appendingPathComponent("Resources", isDirectory: true)
-        let bundledExecutableURL = macOSURL.appendingPathComponent("MD2")
+        let bundledExecutableURL = macOSURL.appendingPathComponent("Markdown2")
 
         if fileManager.fileExists(atPath: bundleURL.path) {
             try fileManager.removeItem(at: bundleURL)
@@ -178,7 +178,7 @@ struct RuntimeAppBundleBuilder {
                 </dict>
             </array>
             <key>CFBundleExecutable</key>
-            <string>MD2</string>
+            <string>Markdown2</string>
             <key>CFBundleIdentifier</key>
             <string>dev.codex.md2.debug</string>
             <key>CFBundleIconFile</key>
@@ -240,7 +240,7 @@ enum BootstrapError: LocalizedError {
         case .executablePathUnavailable:
             "Could not resolve the running executable path."
         case .launchTimedOut:
-            "Timed out while opening the MD2 app bundle."
+            "Timed out while opening the Markdown2 app bundle."
         }
     }
 }

@@ -1,10 +1,10 @@
-# MD2 Sample
+# Markdown2 Sample
 
 [TOC]
 
 ## Writing
 
-MD2 keeps the page quiet while still showing Markdown structure in the editor.
+Markdown2 keeps the page quiet while still showing Markdown structure in the editor.
 
 - [x] Native macOS window
 - [x] Outline
@@ -21,6 +21,6 @@ MD2 keeps the page quiet while still showing Markdown structure in the editor.
 | Code fences | Supported |
 
 ```swift
-let app = "MD2"
+let app = "Markdown2"
 print("Hello, \\(app)")
 ```
