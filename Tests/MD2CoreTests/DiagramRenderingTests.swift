@@ -1,0 +1,136 @@
+import Testing
+@testable import MD2Core
+
+struct DiagramRenderingTests {
+    // MARK: Diagram blocks (3.x)
+
+    @Test func rendersMermaidPlaceholder() {
+        let markdown = """
+        ```mermaid
+        graph TD; A-->B;
+        ```
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains(#"<div class="diagram diagram-mermaid">graph TD; A--&gt;B;</div>"#))
+        // The diagram source is not emitted as a code block.
+        #expect(!document.html.contains("language-mermaid"))
+    }
+
+    @Test func rendersFlowchartPlaceholder() {
+        let markdown = """
+        ```flow
+        st=>start: Start
+        e=>end: End
+        st->e
+        ```
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains(#"<div class="diagram diagram-flow">"#))
+        #expect(document.html.contains("st=&gt;start: Start"))
+        #expect(document.html.contains("st-&gt;e"))
+    }
+
+    @Test func rendersSequencePlaceholder() {
+        let markdown = """
+        ```sequence
+        Alice->Bob: Hi
+        Bob-->Alice: Hello
+        ```
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains(#"<div class="diagram diagram-sequence">"#))
+        #expect(document.html.contains("Alice-&gt;Bob: Hi"))
+        #expect(document.html.contains("Bob--&gt;Alice: Hello"))
+    }
+
+    @Test func diagramInfoStringIsCaseInsensitive() {
+        let markdown = """
+        ```Mermaid
+        graph TD; A-->B;
+        ```
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains(#"class="diagram diagram-mermaid""#))
+    }
+
+    @Test func diagramSourceIsVerbatimAndNotMarkdownProcessed() {
+        // Underscores/asterisks in diagram source must reach the engine literally.
+        let markdown = """
+        ```mermaid
+        graph LR; _a_-->*b*;
+        ```
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        // The verbatim, HTML-escaped source proves no inline Markdown ran: the
+        // underscores/asterisks survive instead of becoming <em>/<strong>.
+        #expect(document.html.contains(#"<div class="diagram diagram-mermaid">graph LR; _a_--&gt;*b*;</div>"#))
+    }
+
+    // MARK: Non-diagram fences stay code (3.3 / spec: no interference)
+
+    @Test func swiftFenceStaysCodeBlock() {
+        let markdown = """
+        ```swift
+        let a = 1
+        ```
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("language-swift"))
+        #expect(!document.html.contains("class=\"diagram"))
+    }
+
+    @Test func plainTextFenceWithDiagramSourceStaysLiteral() {
+        let markdown = """
+        ```text
+        graph TD; A-->B;
+        ```
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<pre><code"))
+        #expect(!document.html.contains("class=\"diagram"))
+    }
+
+    @Test func unlabeledFenceStaysCodeBlock() {
+        let markdown = """
+        ```
+        plain fenced content
+        ```
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<pre><code>plain fenced content</code></pre>"))
+        #expect(!document.html.contains("class=\"diagram"))
+    }
+
+    // MARK: Offline assets / bootstrap presence
+
+    @Test func previewInlinesDiagramEnginesAndBootstrap() {
+        let document = MarkdownRenderer().render("""
+        ```mermaid
+        graph TD; A-->B;
+        ```
+        """)
+
+        // Bootstrap dispatches per engine.
+        #expect(document.html.contains(".diagram-mermaid"))
+        #expect(document.html.contains(".diagram-flow"))
+        #expect(document.html.contains(".diagram-sequence"))
+        // Defensive guards mirror the math bootstrap.
+        #expect(document.html.contains("typeof mermaid"))
+    }
+}

@@ -144,22 +144,35 @@ public struct MarkdownRenderer: Sendable {
 
         while index < lines.count {
             if lines[index].trimmedMarkdownLine.hasPrefix(marker) {
-                let languageClass = language.isEmpty ? "" : " class=\"language-\(escapeAttribute(language))\""
-                return (
-                    "<pre><code\(languageClass)>\(SyntaxHighlighter.highlightedHTML(for: code.joined(separator: "\n"), language: language))</code></pre>",
-                    index + 1
-                )
+                return (fencedBlockHTML(language: language, code: code), index + 1)
             }
 
             code.append(lines[index])
             index += 1
         }
 
+        return (fencedBlockHTML(language: language, code: code), index)
+    }
+
+    /// Builds the HTML for a closed or unterminated fenced block. Diagram info
+    /// strings (`mermaid`, `flow`, `sequence`) become diagram placeholders;
+    /// everything else stays a syntax-highlighted/plain code block.
+    private func fencedBlockHTML(language: String, code: [String]) -> String {
+        let source = code.joined(separator: "\n")
+
+        if let diagram = DiagramKind(infoString: language) {
+            return diagramHTML(kind: diagram, source: source)
+        }
+
         let languageClass = language.isEmpty ? "" : " class=\"language-\(escapeAttribute(language))\""
-        return (
-            "<pre><code\(languageClass)>\(SyntaxHighlighter.highlightedHTML(for: code.joined(separator: "\n"), language: language))</code></pre>",
-            index
-        )
+        return "<pre><code\(languageClass)>\(SyntaxHighlighter.highlightedHTML(for: source, language: language))</code></pre>"
+    }
+
+    /// Emits a diagram placeholder carrying the raw diagram source as
+    /// HTML-escaped text content so the client-side engine can read it verbatim
+    /// from the DOM, mirroring ``mathDisplayHTML``.
+    private func diagramHTML(kind: DiagramKind, source: String) -> String {
+        "<div class=\"diagram \(kind.cssClass)\">\(escapeHTML(source.trimmingCharacters(in: .newlines)))</div>"
     }
 
     private func indentedCodeBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int)? {
@@ -837,6 +850,44 @@ public struct MarkdownRenderer: Sendable {
             font-size: 0.9em;
         }
 
+        /* Rendered diagrams are centered SVG, with horizontal scroll for wide ones. */
+        .diagram {
+            margin: 1.1em 0;
+            text-align: center;
+            overflow-x: auto;
+        }
+        .diagram svg {
+            max-width: 100%;
+            height: auto;
+        }
+        /* Keep diagram text/connectors legible against the preview background. */
+        .diagram text {
+            fill: var(--text);
+        }
+        .diagram path,
+        .diagram line,
+        .diagram rect,
+        .diagram ellipse,
+        .diagram polygon {
+            stroke: var(--text);
+        }
+        /* Mermaid ships its own light/dark theme; let it manage its own colors. */
+        .diagram-mermaid text { fill: revert; }
+        .diagram-mermaid path,
+        .diagram-mermaid line,
+        .diagram-mermaid rect,
+        .diagram-mermaid ellipse,
+        .diagram-mermaid polygon { stroke: revert; }
+        /* On parse failure the raw source is shown instead of a blank diagram. */
+        .diagram-error {
+            display: block;
+            text-align: left;
+            white-space: pre-wrap;
+            color: light-dark(#b91c1c, #f87171);
+            font-family: "SF Mono", Menlo, Consolas, monospace;
+            font-size: 0.9em;
+        }
+
         @media (max-width: 720px) {
             main {
                 padding: 32px 24px 60px;
@@ -871,10 +922,122 @@ public struct MarkdownRenderer: Sendable {
             }
         })();
         </script>
+        \(diagramScripts(for: body))
         </body>
         </html>
         """
     }
+
+    /// Builds the diagram engine `<script>` tags and render bootstrap, but only
+    /// for the diagram types the document actually uses. Documents without any
+    /// diagrams pay nothing — notably the large Mermaid bundle is never inlined
+    /// unless a `mermaid` block is present. Shared dependencies are emitted once,
+    /// in dependency order, before the engines that consume them.
+    private func diagramScripts(for body: String) -> String {
+        let hasMermaid = body.contains("diagram-mermaid")
+        let hasFlow = body.contains("diagram-flow")
+        let hasSequence = body.contains("diagram-sequence")
+
+        guard hasMermaid || hasFlow || hasSequence else { return "" }
+
+        var scripts: [String] = []
+        func inline(_ js: String) {
+            scripts.append("<script>\n\(js)\n</script>")
+        }
+
+        // Underscore + Raphael are shared dependencies; emit each once, first.
+        if hasSequence {
+            inline(DiagramAssets.underscore)
+        }
+        if hasFlow || hasSequence {
+            inline(DiagramAssets.raphael)
+        }
+        if hasFlow {
+            inline(DiagramAssets.flowchart)
+        }
+        if hasSequence {
+            inline(DiagramAssets.sequence)
+        }
+        if hasMermaid {
+            inline(DiagramAssets.mermaid)
+        }
+
+        inline(diagramBootstrap)
+        return scripts.joined(separator: "\n")
+    }
+
+    /// Client-side bootstrap that renders each diagram placeholder via its
+    /// engine. Each render is isolated in `try/catch` so one malformed diagram
+    /// cannot blank the rest of the document; on failure the raw source is shown.
+    /// Kept independent from the math bootstrap. Engine guards (`typeof …`) make
+    /// it safe to run even when an engine script was not inlined.
+    private let diagramBootstrap = """
+    (function () {
+        var dark = window.matchMedia
+            && window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        function fail(el, source) {
+            el.classList.add("diagram-error");
+            el.textContent = source;
+        }
+
+        // flowchart.js — depends on the global `flowchart` (+ Raphael).
+        if (typeof flowchart !== "undefined") {
+            var flows = document.querySelectorAll(".diagram-flow");
+            for (var i = 0; i < flows.length; i++) {
+                var el = flows[i];
+                var source = el.textContent;
+                try {
+                    el.textContent = "";
+                    flowchart.parse(source).drawSVG(el);
+                } catch (err) {
+                    fail(el, source);
+                }
+            }
+        }
+
+        // js-sequence-diagrams — depends on the global `Diagram` (+ Underscore, Raphael).
+        if (typeof Diagram !== "undefined") {
+            var seqs = document.querySelectorAll(".diagram-sequence");
+            for (var j = 0; j < seqs.length; j++) {
+                var sel = seqs[j];
+                var ssource = sel.textContent;
+                try {
+                    sel.textContent = "";
+                    Diagram.parse(ssource).drawSVG(sel, { theme: "simple" });
+                } catch (err) {
+                    fail(sel, ssource);
+                }
+            }
+        }
+
+        // Mermaid — self-contained; render explicitly (startOnLoad disabled).
+        if (typeof mermaid !== "undefined") {
+            try {
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: dark ? "dark" : "default",
+                    securityLevel: "loose"
+                });
+            } catch (err) {}
+            var mers = document.querySelectorAll(".diagram-mermaid");
+            for (var k = 0; k < mers.length; k++) {
+                (function (el, idx) {
+                    var source = el.textContent;
+                    try {
+                        mermaid.render("md2-mermaid-" + idx, source).then(function (result) {
+                            el.innerHTML = result.svg;
+                        }).catch(function () {
+                            fail(el, source);
+                        });
+                    } catch (err) {
+                        fail(el, source);
+                    }
+                })(mers[k], k);
+            }
+        }
+    })();
+    """
 
     private func replaceMatches(
         in source: String,
@@ -924,6 +1087,30 @@ public struct MarkdownRenderer: Sendable {
     private func escapeAttribute(_ source: String) -> String {
         escapeHTML(source)
             .replacingOccurrences(of: "'", with: "&#39;")
+    }
+}
+
+/// A fenced code-block info string that should render as a diagram rather than
+/// as code. The raw case value is the lower-cased Markdown info string.
+private enum DiagramKind: String {
+    case mermaid
+    case flow
+    case sequence
+
+    init?(infoString: String) {
+        let normalized = infoString.trimmingCharacters(in: .whitespaces).lowercased()
+        self.init(rawValue: normalized)
+    }
+
+    var cssClass: String {
+        switch self {
+        case .mermaid:
+            return "diagram-mermaid"
+        case .flow:
+            return "diagram-flow"
+        case .sequence:
+            return "diagram-sequence"
+        }
     }
 }
 

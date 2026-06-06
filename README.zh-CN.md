@@ -23,6 +23,7 @@
 - **字数、字符数、行数与阅读时间**状态栏。
 - **丰富的 Markdown 渲染** — 标题、段落、强调、链接、图片、引用、分隔线、有序/无序/任务列表、表格、围栏代码（带语法高亮）、YAML front matter 及 `[TOC]`。
 - **数学公式** — 行内 `$...$` 与独占一行的 `$$...$$` TeX 公式，使用内置 [KaTeX](https://katex.org/) 离线渲染（无需联网），并内置 mhchem 扩展以支持化学式（`\ce{...}`）。
+- **图表** — `mermaid`、`flow`（[flowchart.js](https://flowchart.js.org/)）与 `sequence`（[js-sequence-diagrams](https://bramp.github.io/js-sequence-diagrams/)）代码块，使用内置引擎离线渲染（无需联网）。
 - **快捷模式切换** — 编辑模式按 `Esc` 切换到预览，预览模式 `Cmd+双击` 切回编辑。
 - **应用设置** 支持语言、默认打开模式与默认大纲可见性。
 - 打包时为 `.md` 和 `.markdown` 文件声明 **Markdown 文件类型**。

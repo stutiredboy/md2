@@ -25,7 +25,8 @@ let package = Package(
         .target(
             name: "MD2Core",
             resources: [
-                .copy("Resources/katex")
+                .copy("Resources/katex"),
+                .copy("Resources/diagrams")
             ]
         ),
         .target(
