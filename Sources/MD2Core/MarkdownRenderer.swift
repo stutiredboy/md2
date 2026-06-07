@@ -7,7 +7,12 @@ public struct MarkdownRenderer: Sendable {
 
     public func render(_ markdown: String) -> RenderedDocument {
         let outline = outlineBuilder.build(from: markdown)
-        let body = renderBody(markdown, outline: outline)
+        let footnotes = FootnoteContext()
+        collectFootnoteDefinitions(markdown.normalizedMarkdownLines, into: footnotes)
+        var body = renderBody(markdown, outline: outline, footnotes: footnotes)
+        if let section = footnoteSectionHTML(footnotes) {
+            body += "\n" + section
+        }
         let html = htmlDocument(body: body)
 
         return RenderedDocument(
@@ -17,7 +22,7 @@ public struct MarkdownRenderer: Sendable {
         )
     }
 
-    private func renderBody(_ markdown: String, outline: [Heading]) -> String {
+    private func renderBody(_ markdown: String, outline: [Heading], footnotes: FootnoteContext) -> String {
         let lines = markdown.normalizedMarkdownLines
         let headingsByLine = Dictionary(uniqueKeysWithValues: outline.map { ($0.line, $0) })
         var blocks: [String] = []
@@ -64,7 +69,7 @@ public struct MarkdownRenderer: Sendable {
                 continue
             }
 
-            if let table = tableBlock(from: lines, startIndex: index) {
+            if let table = tableBlock(from: lines, startIndex: index, footnotes: footnotes) {
                 blocks.append(table.html)
                 index = table.nextIndex
                 continue
@@ -91,19 +96,26 @@ public struct MarkdownRenderer: Sendable {
             }
 
             if trimmed.hasPrefix(">") {
-                let blockquote = blockquoteBlock(from: lines, startIndex: index)
+                let blockquote = blockquoteBlock(from: lines, startIndex: index, footnotes: footnotes)
                 blocks.append(blockquote.html)
                 index = blockquote.nextIndex
                 continue
             }
 
-            if let list = listBlock(from: lines, startIndex: index) {
+            // Footnote definitions are collected up front; here they are simply
+            // consumed so they never render in the body flow.
+            if let nextIndex = footnoteDefinitionBlock(from: lines, startIndex: index) {
+                index = nextIndex
+                continue
+            }
+
+            if let list = listBlock(from: lines, startIndex: index, footnotes: footnotes) {
                 blocks.append(list.html)
                 index = list.nextIndex
                 continue
             }
 
-            let paragraph = paragraphBlock(from: lines, startIndex: index)
+            let paragraph = paragraphBlock(from: lines, startIndex: index, footnotes: footnotes)
             blocks.append(paragraph.html)
             index = paragraph.nextIndex
         }
@@ -280,7 +292,7 @@ public struct MarkdownRenderer: Sendable {
         )
     }
 
-    private func tableBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int)? {
+    private func tableBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext? = nil) -> (html: String, nextIndex: Int)? {
         guard startIndex + 1 < lines.count,
               lines[startIndex].contains("|"),
               let alignments = tableAlignments(in: lines[startIndex + 1]) else {
@@ -301,7 +313,7 @@ public struct MarkdownRenderer: Sendable {
         let headerHTML = headers.enumerated()
             .map { index, header in
                 let style = alignments[safe: index]?.htmlAttribute ?? ""
-                return "<th\(style)>\(inlineHTML(header.trimmingCharacters(in: .whitespaces)))</th>"
+                return "<th\(style)>\(inlineHTML(header.trimmingCharacters(in: .whitespaces), footnotes: footnotes))</th>"
             }
             .joined()
         let bodyHTML = rows
@@ -309,7 +321,7 @@ public struct MarkdownRenderer: Sendable {
                 let cells = row.enumerated()
                     .map { index, cell in
                         let style = alignments[safe: index]?.htmlAttribute ?? ""
-                        return "<td\(style)>\(inlineHTML(cell.trimmingCharacters(in: .whitespaces)))</td>"
+                        return "<td\(style)>\(inlineHTML(cell.trimmingCharacters(in: .whitespaces), footnotes: footnotes))</td>"
                     }
                     .joined()
                 return "<tr>\(cells)</tr>"
@@ -329,7 +341,7 @@ public struct MarkdownRenderer: Sendable {
         )
     }
 
-    private func blockquoteBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int) {
+    private func blockquoteBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext) -> (html: String, nextIndex: Int) {
         var quoteLines: [String] = []
         var index = startIndex
 
@@ -343,12 +355,12 @@ public struct MarkdownRenderer: Sendable {
         }
 
         let nestedMarkdown = quoteLines.joined(separator: "\n")
-        let quote = renderBody(nestedMarkdown, outline: outlineBuilder.build(from: nestedMarkdown))
+        let quote = renderBody(nestedMarkdown, outline: outlineBuilder.build(from: nestedMarkdown), footnotes: footnotes)
 
         return ("<blockquote>\n\(quote)\n</blockquote>", index)
     }
 
-    private func listBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int)? {
+    private func listBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext) -> (html: String, nextIndex: Int)? {
         guard let firstItem = parseListItem(lines[startIndex]) else { return nil }
 
         var items: [ListItem] = [firstItem]
@@ -370,13 +382,13 @@ public struct MarkdownRenderer: Sendable {
                 checkbox = ""
             }
 
-            return "<li>\(checkbox)\(inlineHTML(item.text))</li>"
+            return "<li>\(checkbox)\(inlineHTML(item.text, footnotes: footnotes))</li>"
         }.joined(separator: "\n")
 
         return ("<\(tag)\(className)>\n\(itemHTML)\n</\(tag)>", index)
     }
 
-    private func paragraphBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int) {
+    private func paragraphBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext) -> (html: String, nextIndex: Int) {
         var paragraphLines: [String] = []
         var index = startIndex
 
@@ -391,6 +403,7 @@ public struct MarkdownRenderer: Sendable {
                 (index + 1 < lines.count && MarkdownLine.setextHeadingLevel(in: lines[index + 1]) != nil) ||
                 trimmed == "[TOC]" ||
                 trimmed.hasPrefix(">") ||
+                isFootnoteDefinitionLine(line) ||
                 parseListItem(line) != nil ||
                 mathBlock(from: lines, startIndex: index) != nil ||
                 tableBlock(from: lines, startIndex: index) != nil {
@@ -401,10 +414,10 @@ public struct MarkdownRenderer: Sendable {
             index += 1
         }
 
-        return ("<p>\(paragraphHTML(paragraphLines))</p>", max(index, startIndex + 1))
+        return ("<p>\(paragraphHTML(paragraphLines, footnotes: footnotes))</p>", max(index, startIndex + 1))
     }
 
-    private func paragraphHTML(_ lines: [String]) -> String {
+    private func paragraphHTML(_ lines: [String], footnotes: FootnoteContext) -> String {
         lines.enumerated().map { index, line in
             let hasHardBreak = line.hasSuffix("  ") || line.hasSuffix("\\")
             let content: String
@@ -416,15 +429,141 @@ public struct MarkdownRenderer: Sendable {
             }
 
             if hasHardBreak {
-                return "\(inlineHTML(content))<br>"
+                return "\(inlineHTML(content, footnotes: footnotes))<br>"
             }
 
             if index < lines.count - 1 {
-                return "\(inlineHTML(content)) "
+                return "\(inlineHTML(content, footnotes: footnotes)) "
             }
 
-            return inlineHTML(content)
+            return inlineHTML(content, footnotes: footnotes)
         }.joined()
+    }
+
+    // MARK: Footnotes
+
+    /// Whole-document pre-scan that records footnote definitions (`[^id]: text`)
+    /// and their indented continuation lines, while skipping fenced/indented code
+    /// and display-math blocks so footnote-like text inside them is never treated
+    /// as a definition. Running this before rendering lets references that appear
+    /// before their definition still resolve and be numbered correctly.
+    private func collectFootnoteDefinitions(_ lines: [String], into context: FootnoteContext) {
+        var index = 0
+        while index < lines.count {
+            if let fence = fencedCodeBlock(from: lines, startIndex: index) {
+                index = fence.nextIndex
+                continue
+            }
+            if let code = indentedCodeBlock(from: lines, startIndex: index) {
+                index = code.nextIndex
+                continue
+            }
+            if let math = mathBlock(from: lines, startIndex: index) {
+                index = math.nextIndex
+                continue
+            }
+            if let definition = parseFootnoteDefinition(from: lines, startIndex: index) {
+                context.define(label: definition.label, content: definition.content)
+                index = definition.nextIndex
+                continue
+            }
+            index += 1
+        }
+    }
+
+    /// Consumes a footnote definition (and its continuation lines) during the body
+    /// walk so it produces no in-place output; the content was already captured by
+    /// ``collectFootnoteDefinitions``.
+    private func footnoteDefinitionBlock(from lines: [String], startIndex: Int) -> Int? {
+        guard let definition = parseFootnoteDefinition(from: lines, startIndex: startIndex) else {
+            return nil
+        }
+        return definition.nextIndex
+    }
+
+    /// Parses a `[^id]: text` definition starting at `startIndex`, gathering any
+    /// following indented continuation lines (blank lines are kept only when an
+    /// indented line follows them). Up to three leading spaces are allowed so a
+    /// 4-space-indented line is left to indented-code handling instead.
+    private func parseFootnoteDefinition(
+        from lines: [String],
+        startIndex: Int
+    ) -> (label: String, content: [String], nextIndex: Int)? {
+        let line = lines[startIndex]
+        guard let match = firstMatch(in: line, pattern: #"^ {0,3}\[\^([^\]\s]+)\]:[ \t]?(.*)$"#),
+              let labelRange = Range(match.range(at: 1), in: line),
+              let textRange = Range(match.range(at: 2), in: line) else {
+            return nil
+        }
+
+        let label = String(line[labelRange])
+        var content = [String(line[textRange])]
+        var index = startIndex + 1
+
+        while index < lines.count {
+            let candidate = lines[index]
+            if candidate.trimmedMarkdownLine.isEmpty {
+                // A blank line continues the definition only if an indented line
+                // follows; otherwise it ends the definition.
+                var lookahead = index
+                while lookahead < lines.count, lines[lookahead].trimmedMarkdownLine.isEmpty {
+                    lookahead += 1
+                }
+                guard lookahead < lines.count, isIndentedContinuation(lines[lookahead]) else {
+                    break
+                }
+                content.append("")
+                index += 1
+                continue
+            }
+
+            guard isIndentedContinuation(candidate) else { break }
+            content.append(candidate.trimmedMarkdownLine)
+            index += 1
+        }
+
+        return (label, content, index)
+    }
+
+    private func isFootnoteDefinitionLine(_ line: String) -> Bool {
+        firstMatch(in: line, pattern: #"^ {0,3}\[\^([^\]\s]+)\]:"#) != nil
+    }
+
+    private func isIndentedContinuation(_ line: String) -> Bool {
+        let prefix = line.prefix { $0 == " " || $0 == "\t" }
+        return prefix.contains("\t") || prefix.filter { $0 == " " }.count >= 2
+    }
+
+    /// Builds the trailing footnotes section from the referenced definitions, in
+    /// first-reference order, each with a back-reference link per reference site.
+    /// Returns `nil` when no footnote was referenced.
+    private func footnoteSectionHTML(_ context: FootnoteContext) -> String? {
+        guard context.hasReferences else { return nil }
+
+        let items = context.referencedLabels.map { label -> String in
+            let base = context.anchorBase(for: label)
+            let raw = (context.content(for: label) ?? [])
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
+            let rendered = inlineHTML(raw)
+
+            let count = context.referenceCount(for: label)
+            let backrefs = (1...max(count, 1)).map { occurrence -> String in
+                let anchor = occurrence == 1 ? "fnref-\(base)" : "fnref-\(base)-\(occurrence)"
+                return "<a class=\"footnote-backref\" href=\"#\(anchor)\" aria-label=\"Back to reference\">↩</a>"
+            }.joined(separator: " ")
+
+            return "<li id=\"fn-\(base)\">\(rendered) \(backrefs)</li>"
+        }.joined(separator: "\n")
+
+        return """
+        <section class="footnotes">
+        <ol>
+        \(items)
+        </ol>
+        </section>
+        """
     }
 
     private func tableOfContents(_ outline: [Heading]) -> String {
@@ -536,7 +675,7 @@ public struct MarkdownRenderer: Sendable {
         return cells
     }
 
-    private func inlineHTML(_ markdown: String) -> String {
+    private func inlineHTML(_ markdown: String, footnotes: FootnoteContext? = nil) -> String {
         var protectedFragments: [String] = []
         func protect(_ fragment: String) -> String {
             let token = "\u{E000}MD2-\(protectedFragments.count)\u{E000}"
@@ -587,6 +726,40 @@ public struct MarkdownRenderer: Sendable {
 
         text = replaceMatches(in: text, pattern: #"</?(?:abbr|b|br|cite|code|del|details|div|em|i|img|kbd|mark|small|span|strong|sub|summary|sup|u)(?:\s+[^<>]*)?/?>"#) { match, source in
             protect(matchText(match, in: source))
+        }
+
+        // Footnote references `[^id]`. Runs after code/HTML protection so footnote
+        // syntax inside inline code is never matched, and only ids that have a
+        // collected definition become links — others fall through as literal text.
+        // Rebuild left-to-right so duplicate reference anchors follow reading order.
+        // The produced anchor is protected so HTML-escaping leaves it intact.
+        if let footnotes, footnotes.hasDefinitions {
+            let referencePattern = #"\[\^([^\]\s]+)\]"#
+            if let regex = try? NSRegularExpression(pattern: referencePattern) {
+                let range = NSRange(text.startIndex..<text.endIndex, in: text)
+                let matches = regex.matches(in: text, range: range)
+                var rebuilt = ""
+                var cursor = text.startIndex
+
+                for match in matches {
+                    guard let matchRange = Range(match.range, in: text) else { continue }
+                    rebuilt += text[cursor..<matchRange.lowerBound]
+
+                    if let labelRange = Range(match.range(at: 1), in: text),
+                       let reference = footnotes.registerReference(String(text[labelRange])) {
+                        rebuilt += protect(
+                            "<sup class=\"footnote-ref\"><a id=\"\(reference.refAnchor)\" href=\"#\(reference.defAnchor)\">\(reference.number)</a></sup>"
+                        )
+                    } else {
+                        rebuilt += text[matchRange]
+                    }
+
+                    cursor = matchRange.upperBound
+                }
+
+                rebuilt += text[cursor...]
+                text = rebuilt
+            }
         }
 
         text = escapeHTML(text)
@@ -946,6 +1119,36 @@ public struct MarkdownRenderer: Sendable {
             font-size: 0.9em;
         }
 
+        /* Footnote references render as a small superscript link; the footnotes
+           section sits below the body, separated by a quiet rule, inheriting the
+           preview foreground/link colors for light & dark legibility. */
+        sup.footnote-ref {
+            font-size: 0.75em;
+            line-height: 0;
+            white-space: nowrap;
+        }
+        sup.footnote-ref a {
+            text-decoration: none;
+        }
+        section.footnotes {
+            margin-top: 2.4em;
+            padding-top: 1em;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+            font-size: 0.9em;
+        }
+        section.footnotes ol {
+            padding-left: 1.4em;
+        }
+        section.footnotes li {
+            margin: 0.4em 0;
+        }
+        .footnote-backref {
+            margin-left: 0.35em;
+            text-decoration: none;
+            font-size: 0.92em;
+        }
+
         @media (max-width: 720px) {
             main {
                 padding: 32px 24px 60px;
@@ -1215,5 +1418,93 @@ private enum TableAlignment {
 private extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
+    }
+}
+
+/// Document-wide footnote state. Footnotes need shared, order-dependent
+/// bookkeeping that the stateless per-block inline rendering cannot provide:
+/// definitions are collected up front, references are numbered by first
+/// appearance, and each reference site gets a unique anchor so the trailing
+/// footnotes section can link back to every occurrence.
+private final class FootnoteContext {
+    /// label -> raw content lines, populated by the definition pre-scan.
+    private var definitions: [String: [String]] = [:]
+    /// Referenced labels in first-reference order; the index + 1 is the number.
+    private var order: [String] = []
+    /// label -> number of references seen so far (drives back-reference anchors).
+    private var counts: [String: Int] = [:]
+    /// label -> sanitized, document-unique anchor base, computed once.
+    private var anchorBases: [String: String] = [:]
+    private var usedAnchorBases: Set<String> = []
+
+    var hasDefinitions: Bool { !definitions.isEmpty }
+    var hasReferences: Bool { !order.isEmpty }
+    var referencedLabels: [String] { order }
+
+    func define(label: String, content: [String]) {
+        // First definition wins, mirroring common Markdown footnote behavior.
+        if definitions[label] == nil {
+            definitions[label] = content
+        }
+    }
+
+    func content(for label: String) -> [String]? {
+        definitions[label]
+    }
+
+    func referenceCount(for label: String) -> Int {
+        counts[label, default: 0]
+    }
+
+    /// Records a reference to `label`. Returns the display number and the
+    /// reference/definition anchors, or `nil` when the label has no definition
+    /// (so the caller leaves the `[^id]` text literal).
+    func registerReference(_ label: String) -> (number: Int, refAnchor: String, defAnchor: String)? {
+        guard definitions[label] != nil else { return nil }
+
+        let number: Int
+        if let existing = order.firstIndex(of: label) {
+            number = existing + 1
+        } else {
+            order.append(label)
+            number = order.count
+        }
+
+        let occurrence = counts[label, default: 0] + 1
+        counts[label] = occurrence
+
+        let base = anchorBase(for: label)
+        let refAnchor = occurrence == 1 ? "fnref-\(base)" : "fnref-\(base)-\(occurrence)"
+        return (number, refAnchor, "fn-\(base)")
+    }
+
+    /// A slugified, document-unique anchor base for a label, stable across calls.
+    func anchorBase(for label: String) -> String {
+        if let existing = anchorBases[label] { return existing }
+
+        var slug = ""
+        var lastWasDash = false
+        for scalar in label.lowercased().unicodeScalars {
+            if CharacterSet.alphanumerics.contains(scalar) {
+                slug.unicodeScalars.append(scalar)
+                lastWasDash = false
+            } else if !lastWasDash {
+                slug.append("-")
+                lastWasDash = true
+            }
+        }
+        slug = slug.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        let stem = slug.isEmpty ? "fn" : slug
+
+        var candidate = stem
+        var suffix = 2
+        while usedAnchorBases.contains(candidate) {
+            candidate = "\(stem)-\(suffix)"
+            suffix += 1
+        }
+
+        usedAnchorBases.insert(candidate)
+        anchorBases[label] = candidate
+        return candidate
     }
 }

@@ -35,6 +35,14 @@ Safe inline HTML: <u>underline</u>, <kbd>Cmd+S</kbd>, <mark>highlighted</mark>, 
 
 ![Sample](https://via.placeholder.com/200x100 "Placeholder image")
 
+## Footnotes
+
+Footnotes let you add citations and asides without cluttering the prose.[^1] You can use numbered labels or named ones[^typora], and the same note can be referenced more than once.[^1]
+
+[^1]: This is the first footnote — referenced twice from the paragraph above.
+[^typora]: Named labels work too. See the Typora reference: <https://support.typora.io/Markdown-Reference/#footnotes>.
+    Continuation lines are indented and become part of the same footnote.
+
 ## Block Elements
 
 > Blockquote with **bold** and *italic*.
