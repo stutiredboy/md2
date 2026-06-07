@@ -1,3 +1,4 @@
+import AppKit
 import MD2Core
 import SwiftUI
 import WebKit
@@ -14,6 +15,18 @@ struct MarkdownPreviewView: NSViewRepresentable {
     var onAnchorChange: (_ headingID: String?, _ fraction: Double) -> Void = { _, _ in }
     /// Called on a Cmd+double-click, requesting a switch to edit mode.
     var onEnterEdit: () -> Void = {}
+    /// The current find query; running search whenever it changes.
+    @Binding var findQuery: String
+    /// A next/previous navigation request; consumed (set to nil) once applied.
+    @Binding var findNavigation: FindCommand?
+    /// Changes whenever the preview surface should become first responder.
+    let focusToken: UUID
+    /// Called when the web view receives a standard Find key/menu action before
+    /// SwiftUI commands can route it through `DocumentStore`.
+    var onFindShortcut: (_ action: FindCommand.Action) -> Void = { _ in }
+    /// Reports match count and the 1-based index of the current match (0 when
+    /// there are none) back to the find bar.
+    var onFindResult: (_ total: Int, _ index: Int) -> Void = { _, _ in }
 
     private static let enterEditMessageName = "enterEdit"
     private static let anchorMessageName = "anchorChange"
@@ -40,6 +53,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
 
             function topAnchor() {
                 if (Date.now() < suppressUntil) { return; }
+                if (window.__md2FindActive) { return; }
                 var headings = document.querySelectorAll('h1,h2,h3,h4,h5,h6');
                 // The "current" section is the last heading at or above the top,
                 // but a heading the reader has scrolled to just under the top edge
@@ -151,6 +165,111 @@ struct MarkdownPreviewView: NSViewRepresentable {
                     return max > 0 ? max * f : 0;
                 });
             };
+
+            // --- Find (preview, read-only) --------------------------------
+            // Walks text nodes and wraps case-insensitive matches in <mark>
+            // elements so they can be highlighted and scrolled to. Returns
+            // {total, index} so the native find bar can show "i / n". The
+            // current match also gets a distinct class. `__md2FindActive`
+            // briefly suppresses anchor reporting so programmatic scrolling to a
+            // match is not captured as the user's mode-switch anchor.
+            var findMarks = [];
+            var findCurrent = -1;
+            window.__md2FindActive = false;
+
+            (function ensureFindStyle() {
+                var style = document.createElement('style');
+                style.textContent =
+                    'mark.md2-find{background:#ffe066;color:inherit;border-radius:2px;}' +
+                    'mark.md2-find-current{background:#ff9f1c;}';
+                document.head.appendChild(style);
+            })();
+
+            function clearFind() {
+                for (var i = 0; i < findMarks.length; i++) {
+                    var m = findMarks[i];
+                    var parent = m.parentNode;
+                    if (!parent) { continue; }
+                    parent.replaceChild(document.createTextNode(m.textContent), m);
+                    parent.normalize();
+                }
+                findMarks = [];
+                findCurrent = -1;
+            }
+            window.__md2FindClear = clearFind;
+
+            function setCurrent(index) {
+                if (findMarks.length === 0) { return { total: 0, index: 0 }; }
+                if (findCurrent >= 0 && findCurrent < findMarks.length) {
+                    findMarks[findCurrent].classList.remove('md2-find-current');
+                }
+                findCurrent = ((index % findMarks.length) + findMarks.length) % findMarks.length;
+                var el = findMarks[findCurrent];
+                el.classList.add('md2-find-current');
+                window.__md2FindActive = true;
+                el.scrollIntoView({ block: 'center', inline: 'nearest' });
+                clearTimeout(window.__md2FindTimer);
+                window.__md2FindTimer = setTimeout(function () {
+                    window.__md2FindActive = false;
+                }, 400);
+                return { total: findMarks.length, index: findCurrent + 1 };
+            }
+
+            window.__md2Find = function (query) {
+                clearFind();
+                if (!query) { return { total: 0, index: 0 }; }
+                var lower = query.toLowerCase();
+                var walker = document.createTreeWalker(
+                    document.body, NodeFilter.SHOW_TEXT, {
+                        acceptNode: function (node) {
+                            if (!node.nodeValue) { return NodeFilter.FILTER_REJECT; }
+                            var p = node.parentNode;
+                            if (p && (p.tagName === 'SCRIPT' || p.tagName === 'STYLE' ||
+                                      p.tagName === 'MARK')) {
+                                return NodeFilter.FILTER_REJECT;
+                            }
+                            return node.nodeValue.toLowerCase().indexOf(lower) >= 0
+                                ? NodeFilter.FILTER_ACCEPT
+                                : NodeFilter.FILTER_REJECT;
+                        }
+                    }
+                );
+                var targets = [];
+                var n;
+                while ((n = walker.nextNode())) { targets.push(n); }
+
+                for (var t = 0; t < targets.length; t++) {
+                    var node = targets[t];
+                    var text = node.nodeValue;
+                    var lowerText = text.toLowerCase();
+                    var frag = document.createDocumentFragment();
+                    var from = 0;
+                    var at;
+                    while ((at = lowerText.indexOf(lower, from)) >= 0) {
+                        if (at > from) {
+                            frag.appendChild(document.createTextNode(text.slice(from, at)));
+                        }
+                        var mark = document.createElement('mark');
+                        mark.className = 'md2-find';
+                        mark.textContent = text.slice(at, at + query.length);
+                        frag.appendChild(mark);
+                        findMarks.push(mark);
+                        from = at + query.length;
+                    }
+                    if (from < text.length) {
+                        frag.appendChild(document.createTextNode(text.slice(from)));
+                    }
+                    node.parentNode.replaceChild(frag, node);
+                }
+
+                if (findMarks.length === 0) { return { total: 0, index: 0 }; }
+                return setCurrent(0);
+            };
+
+            window.__md2FindNext = function (forward) {
+                if (findMarks.length === 0) { return { total: 0, index: 0 }; }
+                return setCurrent(findCurrent + (forward ? 1 : -1));
+            };
         })();
         """
         let userScript = WKUserScript(
@@ -162,7 +281,10 @@ struct MarkdownPreviewView: NSViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: Self.enterEditMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.anchorMessageName)
 
-        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = PreviewWebView(frame: .zero, configuration: configuration)
+        webView.onFindAction = { action in
+            context.coordinator.onFindShortcut(action)
+        }
         webView.allowsBackForwardNavigationGestures = true
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground")
@@ -172,10 +294,20 @@ struct MarkdownPreviewView: NSViewRepresentable {
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.onEnterEdit = onEnterEdit
         context.coordinator.onAnchorChange = onAnchorChange
+        context.coordinator.onFindShortcut = onFindShortcut
+        context.coordinator.onFindResult = onFindResult
+
+        if let previewWebView = webView as? PreviewWebView {
+            previewWebView.onFindAction = { action in
+                context.coordinator.onFindShortcut(action)
+            }
+        }
 
         if context.coordinator.lastHTML != html || context.coordinator.lastBaseURL != baseURL {
             context.coordinator.lastHTML = html
             context.coordinator.lastBaseURL = baseURL
+            context.coordinator.beginLoading()
+            context.coordinator.lastFindQuery = nil
             // Load with the pending heading as a URL fragment so WebKit scrolls
             // to it natively during parsing. This is the only thing that can
             // position the page before the inlined diagram/math engine scripts
@@ -198,6 +330,51 @@ struct MarkdownPreviewView: NSViewRepresentable {
             self.jumpHeadingID = nil
             self.jumpFraction = nil
         }
+
+        if context.coordinator.lastFindQuery != findQuery {
+            context.coordinator.lastFindQuery = findQuery
+            context.coordinator.runFindWhenReady(findQuery, in: webView)
+        }
+
+        if let navigation = findNavigation {
+            navigateFind(navigation, in: webView, coordinator: context.coordinator)
+            self.findNavigation = nil
+        }
+
+        if context.coordinator.lastFocusToken != focusToken {
+            context.coordinator.lastFocusToken = focusToken
+            DispatchQueue.main.async {
+                webView.window?.makeFirstResponder(webView)
+            }
+        }
+    }
+
+    /// Highlights all matches of `query` and reports the JavaScript result.
+    private static func evaluateFind(
+        _ query: String,
+        in webView: WKWebView,
+        completion: @escaping (Any?) -> Void
+    ) {
+        let escaped = Self.escapeForJS(query)
+        webView.evaluateJavaScript("window.__md2Find('\(escaped)');") { result, _ in
+            completion(result)
+        }
+    }
+
+    /// Moves to the next or previous match and reports the result.
+    private func navigateFind(_ command: FindCommand, in webView: WKWebView, coordinator: Coordinator) {
+        let forward = command.action != .previous
+        webView.evaluateJavaScript("window.__md2FindNext(\(forward));") { result, _ in
+            coordinator.reportFindResult(result)
+        }
+    }
+
+    private static func escapeForJS(_ string: String) -> String {
+        string
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "")
     }
 
     func makeCoordinator() -> Coordinator {
@@ -253,9 +430,41 @@ struct MarkdownPreviewView: NSViewRepresentable {
         var previewFileURL: URL?
         var onEnterEdit: () -> Void = {}
         var onAnchorChange: (_ headingID: String?, _ fraction: Double) -> Void = { _, _ in }
+        var onFindShortcut: (_ action: FindCommand.Action) -> Void = { _ in }
+        var onFindResult: (_ total: Int, _ index: Int) -> Void = { _, _ in }
+        var lastFindQuery: String?
+        var lastFocusToken: UUID?
 
         private var isLoaded = false
         private var pendingScroll: ModeSwitchAnchor?
+        private var pendingFindQuery: String?
+
+        /// Marks the page as loading before WebKit callbacks arrive. This prevents
+        /// a same-query search from running against the previous document body.
+        func beginLoading() {
+            isLoaded = false
+        }
+
+        /// Runs a preview search immediately when the page is ready, otherwise
+        /// remembers the latest query and applies it after `didFinish`.
+        func runFindWhenReady(_ query: String, in webView: WKWebView) {
+            pendingFindQuery = query
+            if isLoaded {
+                applyPendingFind(in: webView)
+            }
+        }
+
+        /// Parses the `{total, index}` object returned by the JS find helpers and
+        /// forwards it to the find bar.
+        func reportFindResult(_ result: Any?) {
+            guard let dict = result as? [String: Any] else {
+                onFindResult(0, 0)
+                return
+            }
+            let total = (dict["total"] as? NSNumber)?.intValue ?? 0
+            let index = (dict["index"] as? NSNumber)?.intValue ?? 0
+            onFindResult(total, index)
+        }
 
         func userContentController(
             _ userContentController: WKUserContentController,
@@ -288,6 +497,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             isLoaded = true
             applyPendingScroll(in: webView)
+            applyPendingFind(in: webView)
         }
 
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
@@ -313,10 +523,76 @@ struct MarkdownPreviewView: NSViewRepresentable {
             }
         }
 
+        private func applyPendingFind(in webView: WKWebView) {
+            guard let query = pendingFindQuery else { return }
+            pendingFindQuery = nil
+            MarkdownPreviewView.evaluateFind(query, in: webView) { [weak self] result in
+                self?.reportFindResult(result)
+            }
+        }
+
         deinit {
             if let previewFileURL {
                 try? FileManager.default.removeItem(at: previewFileURL)
             }
+        }
+    }
+}
+
+private final class PreviewWebView: WKWebView {
+    var onFindAction: ((FindCommand.Action) -> Void)?
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if let action = findAction(for: event) {
+            onFindAction?(action)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    @objc(performFindPanelAction:)
+    func md2PerformFindPanelAction(_ sender: Any?) {
+        onFindAction?(findAction(for: sender))
+    }
+
+    override func performTextFinderAction(_ sender: Any?) {
+        onFindAction?(findAction(for: sender))
+    }
+
+    private func findAction(for event: NSEvent) -> FindCommand.Action? {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard flags.contains(.command),
+              !flags.contains(.control),
+              !flags.contains(.option),
+              let key = event.charactersIgnoringModifiers?.lowercased() else {
+            return nil
+        }
+
+        switch key {
+        case "f":
+            return .show
+        case "g":
+            return flags.contains(.shift) ? .previous : .next
+        default:
+            return nil
+        }
+    }
+
+    private func findAction(for sender: Any?) -> FindCommand.Action {
+        guard let menuItem = sender as? NSMenuItem,
+              let textFinderAction = NSTextFinder.Action(rawValue: menuItem.tag) else {
+            return .show
+        }
+
+        switch textFinderAction {
+        case .nextMatch:
+            return .next
+        case .previousMatch:
+            return .previous
+        case .showReplaceInterface:
+            return .showReplace
+        default:
+            return .show
         }
     }
 }

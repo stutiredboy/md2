@@ -11,6 +11,21 @@ struct MarkdownEditorView: NSViewRepresentable {
     var onAnchorLineChange: (Int) -> Void = { _ in }
     /// Called when the user presses Esc, requesting a switch to preview mode.
     var onEnterPreview: () -> Void = {}
+    /// The current edit-mode find query.
+    @Binding var findQuery: String
+    /// A next/previous navigation request; consumed once applied.
+    @Binding var findNavigation: FindCommand?
+    /// Replacement text for edit-mode replace actions.
+    @Binding var findReplacement: String
+    /// A replace-current/all request; consumed once applied.
+    @Binding var replaceCommand: FindReplaceCommand?
+    /// Changes whenever the editor surface should become first responder.
+    let focusToken: UUID
+    /// Called when the text view receives a standard Find key/menu action before
+    /// SwiftUI commands can route it through `DocumentStore`.
+    var onFindShortcut: (_ action: FindCommand.Action) -> Void = { _ in }
+    /// Reports match count and the 1-based index of the current match.
+    var onFindResult: (_ total: Int, _ index: Int) -> Void = { _, _ in }
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSScrollView()
@@ -19,7 +34,10 @@ struct MarkdownEditorView: NSViewRepresentable {
         scrollView.drawsBackground = false
         scrollView.autohidesScrollers = true
 
-        let textView = NSTextView()
+        let textView = MarkdownSourceTextView()
+        textView.onFindAction = { action in
+            context.coordinator.onFindShortcut(action)
+        }
         textView.delegate = context.coordinator
         textView.string = text
         textView.isRichText = false
@@ -62,13 +80,43 @@ struct MarkdownEditorView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.onEnterPreview = onEnterPreview
         context.coordinator.onAnchorLineChange = onAnchorLineChange
+        context.coordinator.onFindShortcut = onFindShortcut
+        context.coordinator.onFindResult = onFindResult
         guard let textView = scrollView.documentView as? NSTextView else { return }
+        if let sourceTextView = textView as? MarkdownSourceTextView {
+            sourceTextView.onFindAction = { action in
+                context.coordinator.onFindShortcut(action)
+            }
+        }
 
         if textView.string != text, !context.coordinator.isApplyingStyle {
             let selectedRanges = textView.selectedRanges
             textView.string = text
             MarkdownTextStyler.apply(to: textView)
             textView.selectedRanges = selectedRanges
+        }
+
+        context.coordinator.updateFind(query: findQuery, in: textView)
+
+        if let findNavigation {
+            context.coordinator.navigateFind(forward: findNavigation.action != .previous, in: textView)
+            self.findNavigation = nil
+        }
+
+        if let replaceCommand {
+            context.coordinator.replace(
+                replaceCommand.action,
+                replacement: findReplacement,
+                in: textView
+            )
+            self.replaceCommand = nil
+        }
+
+        if context.coordinator.lastFocusToken != focusToken {
+            context.coordinator.lastFocusToken = focusToken
+            DispatchQueue.main.async {
+                textView.window?.makeFirstResponder(textView)
+            }
         }
 
         if let jumpLine {
@@ -89,6 +137,8 @@ struct MarkdownEditorView: NSViewRepresentable {
         let coordinator = Coordinator(text: $text)
         coordinator.onEnterPreview = onEnterPreview
         coordinator.onAnchorLineChange = onAnchorLineChange
+        coordinator.onFindShortcut = onFindShortcut
+        coordinator.onFindResult = onFindResult
         return coordinator
     }
 
@@ -161,10 +211,178 @@ struct MarkdownEditorView: NSViewRepresentable {
         var isApplyingStyle = false
         var onEnterPreview: () -> Void = {}
         var onAnchorLineChange: (Int) -> Void = { _ in }
+        var onFindShortcut: (_ action: FindCommand.Action) -> Void = { _ in }
+        var onFindResult: (_ total: Int, _ index: Int) -> Void = { _, _ in }
+        var lastFocusToken: UUID?
         private weak var scrollView: NSScrollView?
+        private var lastFindQuery = ""
+        private var lastIndexedText = ""
+        private var matches: [NSRange] = []
+        private var currentMatchIndex = -1
+        private var highlightedRanges: [NSRange] = []
 
         init(text: Binding<String>) {
             _text = text
+        }
+
+        @MainActor func updateFind(query: String, in textView: NSTextView) {
+            let textChanged = textView.string != lastIndexedText
+            let queryChanged = query != lastFindQuery
+            guard textChanged || queryChanged else {
+                return
+            }
+
+            rebuildFindIndex(
+                query: query,
+                in: textView,
+                preferredIndex: queryChanged ? 0 : currentMatchIndex
+            )
+        }
+
+        @MainActor func navigateFind(forward: Bool, in textView: NSTextView) {
+            guard !matches.isEmpty else {
+                reportFindResult()
+                return
+            }
+
+            let delta = forward ? 1 : -1
+            currentMatchIndex = wrappedIndex(currentMatchIndex + delta, count: matches.count)
+            applyFindHighlights(in: textView)
+            revealCurrentMatch(in: textView)
+            reportFindResult()
+        }
+
+        @MainActor func replace(
+            _ action: FindReplaceCommand.Action,
+            replacement: String,
+            in textView: NSTextView
+        ) {
+            guard !lastFindQuery.isEmpty, !matches.isEmpty else {
+                reportFindResult()
+                return
+            }
+
+            switch action {
+            case .current:
+                replaceCurrent(with: replacement, in: textView)
+            case .all:
+                replaceAll(with: replacement, in: textView)
+            }
+        }
+
+        @MainActor private func replaceCurrent(with replacement: String, in textView: NSTextView) {
+            guard currentMatchIndex >= 0, currentMatchIndex < matches.count else { return }
+            let range = matches[currentMatchIndex]
+            textView.insertText(replacement, replacementRange: range)
+            rebuildFindIndex(
+                query: lastFindQuery,
+                in: textView,
+                preferredIndex: min(currentMatchIndex, max(0, matches.count - 1))
+            )
+        }
+
+        @MainActor private func replaceAll(with replacement: String, in textView: NSTextView) {
+            let fullRange = NSRange(location: 0, length: (textView.string as NSString).length)
+            let mutable = NSMutableString(string: textView.string)
+            for range in matches.reversed() {
+                mutable.replaceCharacters(in: range, with: replacement)
+            }
+
+            guard textView.shouldChangeText(in: fullRange, replacementString: mutable as String) else {
+                return
+            }
+
+            textView.textStorage?.replaceCharacters(in: fullRange, with: mutable as String)
+            textView.didChangeText()
+            rebuildFindIndex(query: lastFindQuery, in: textView, preferredIndex: 0)
+        }
+
+        @MainActor private func rebuildFindIndex(
+            query: String,
+            in textView: NSTextView,
+            preferredIndex: Int
+        ) {
+            clearFindHighlights(in: textView)
+            lastFindQuery = query
+            lastIndexedText = textView.string
+            matches = Self.findMatches(query: query, in: textView.string)
+
+            if matches.isEmpty {
+                currentMatchIndex = -1
+            } else {
+                currentMatchIndex = wrappedIndex(preferredIndex, count: matches.count)
+            }
+
+            applyFindHighlights(in: textView)
+            revealCurrentMatch(in: textView)
+            reportFindResult()
+        }
+
+        private static func findMatches(query: String, in text: String) -> [NSRange] {
+            guard !query.isEmpty else { return [] }
+            let source = text as NSString
+            var results: [NSRange] = []
+            var searchRange = NSRange(location: 0, length: source.length)
+
+            while searchRange.length > 0 {
+                let range = source.range(
+                    of: query,
+                    options: [.caseInsensitive, .diacriticInsensitive],
+                    range: searchRange
+                )
+                if range.location == NSNotFound {
+                    break
+                }
+                results.append(range)
+
+                let nextLocation = range.location + max(range.length, 1)
+                let remaining = source.length - nextLocation
+                searchRange = NSRange(location: nextLocation, length: max(0, remaining))
+            }
+
+            return results
+        }
+
+        @MainActor private func applyFindHighlights(in textView: NSTextView) {
+            guard let layoutManager = textView.layoutManager else { return }
+            highlightedRanges = matches
+            let normalColor = NSColor.systemYellow.withAlphaComponent(0.45)
+            let currentColor = NSColor.systemOrange.withAlphaComponent(0.6)
+
+            for (index, range) in matches.enumerated() {
+                layoutManager.addTemporaryAttribute(
+                    .backgroundColor,
+                    value: index == currentMatchIndex ? currentColor : normalColor,
+                    forCharacterRange: range
+                )
+            }
+        }
+
+        @MainActor private func clearFindHighlights(in textView: NSTextView) {
+            guard let layoutManager = textView.layoutManager else { return }
+            for range in highlightedRanges {
+                layoutManager.removeTemporaryAttribute(.backgroundColor, forCharacterRange: range)
+            }
+            highlightedRanges = []
+        }
+
+        @MainActor private func revealCurrentMatch(in textView: NSTextView) {
+            guard currentMatchIndex >= 0, currentMatchIndex < matches.count else { return }
+            let range = matches[currentMatchIndex]
+            textView.setSelectedRange(range)
+            textView.scrollRangeToVisible(range)
+        }
+
+        private func wrappedIndex(_ index: Int, count: Int) -> Int {
+            ((index % count) + count) % count
+        }
+
+        private func reportFindResult() {
+            if matches.isEmpty {
+                onFindResult(0, 0)
+            } else {
+                onFindResult(matches.count, currentMatchIndex + 1)
+            }
         }
 
         /// Registers for the clip view's bounds-change notifications so the top
@@ -245,6 +463,62 @@ struct MarkdownEditorView: NSViewRepresentable {
             MarkdownTextStyler.apply(to: textView)
             isApplyingStyle = false
             textView.selectedRanges = selectedRanges
+        }
+    }
+}
+
+private final class MarkdownSourceTextView: NSTextView {
+    var onFindAction: ((FindCommand.Action) -> Void)?
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if let action = findAction(for: event) {
+            onFindAction?(action)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    override func performFindPanelAction(_ sender: Any?) {
+        onFindAction?(findAction(for: sender))
+    }
+
+    override func performTextFinderAction(_ sender: Any?) {
+        onFindAction?(findAction(for: sender))
+    }
+
+    private func findAction(for event: NSEvent) -> FindCommand.Action? {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard flags.contains(.command),
+              !flags.contains(.control),
+              let key = event.charactersIgnoringModifiers?.lowercased() else {
+            return nil
+        }
+
+        switch key {
+        case "f":
+            return flags.contains(.option) ? .showReplace : .show
+        case "g":
+            return flags.contains(.shift) ? .previous : .next
+        default:
+            return nil
+        }
+    }
+
+    private func findAction(for sender: Any?) -> FindCommand.Action {
+        guard let menuItem = sender as? NSMenuItem,
+              let textFinderAction = NSTextFinder.Action(rawValue: menuItem.tag) else {
+            return .show
+        }
+
+        switch textFinderAction {
+        case .nextMatch:
+            return .next
+        case .previousMatch:
+            return .previous
+        case .showReplaceInterface:
+            return .showReplace
+        default:
+            return .show
         }
     }
 }

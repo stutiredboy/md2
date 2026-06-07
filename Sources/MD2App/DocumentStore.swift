@@ -24,6 +24,9 @@ final class DocumentStore: ObservableObject {
     @Published var jumpHeadingID: String?
     @Published var jumpFraction: Double?
     @Published private(set) var documentIdentity = UUID()
+    /// Set by Find menu commands; observed by `ContentView`, which dispatches the
+    /// action to whichever surface (editor or preview) is currently active.
+    @Published var findCommand: FindCommand?
 
     private let renderer = MarkdownRenderer()
     private var isLoading = false
@@ -73,6 +76,11 @@ final class DocumentStore: ObservableObject {
         }
 
         return write(to: url)
+    }
+
+    /// Relays a find action from a menu command to the active document surface.
+    func requestFind(_ action: FindCommand.Action) {
+        findCommand = FindCommand(action)
     }
 
     func jump(to heading: Heading) {

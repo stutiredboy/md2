@@ -1,3 +1,4 @@
+import Foundation
 import MD2Core
 import SwiftUI
 
@@ -13,6 +14,25 @@ struct ContentView: View {
     /// fraction fallback), used to anchor a switch into edit mode.
     @State private var previewAnchorID: String?
     @State private var previewAnchorFraction = 0.0
+    /// Edit-mode find/replace bar state (write mode).
+    @State private var editorFindVisible = false
+    @State private var editorFindShowsReplace = false
+    @State private var editorFindQuery = ""
+    @State private var editorFindReplacement = ""
+    @State private var editorFindFocusToken = UUID()
+    @State private var editorFindNavigation: FindCommand?
+    @State private var editorReplaceCommand: FindReplaceCommand?
+    @State private var editorSurfaceFocusToken = UUID()
+    @State private var editorMatchTotal = 0
+    @State private var editorMatchIndex = 0
+    /// Preview-mode find bar state (read mode).
+    @State private var previewFindVisible = false
+    @State private var previewFindQuery = ""
+    @State private var previewFindFocusToken = UUID()
+    @State private var previewFindNavigation: FindCommand?
+    @State private var previewSurfaceFocusToken = UUID()
+    @State private var previewMatchTotal = 0
+    @State private var previewMatchIndex = 0
     private let onOpen: () -> Void
 
     init(document: DocumentStore, settings: AppSettings, onOpen: @escaping () -> Void) {
@@ -46,6 +66,15 @@ struct ContentView: View {
         .navigationTitle(document.displayTitle)
         .onChange(of: document.documentIdentity) { _, _ in
             applyDefaultPresentation()
+            dismissEditorFind()
+            dismissPreviewFind()
+        }
+        .onChange(of: mode) { _, _ in
+            dismissEditorFind()
+            dismissPreviewFind()
+        }
+        .onChange(of: document.findCommand) { _, command in
+            handleFindCommand(command)
         }
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
@@ -98,6 +127,90 @@ struct ContentView: View {
         showsOutline = settings.showsOutlineByDefault
     }
 
+    /// Dispatches a find action from the menu to the active surface.
+    private func handleFindCommand(_ command: FindCommand?) {
+        guard let command else { return }
+        defer { document.findCommand = nil }
+
+        switch mode {
+        case .write:
+            handleEditorFindAction(command.action)
+        case .read:
+            handlePreviewFindAction(command.action)
+        }
+    }
+
+    private func handleEditorFindAction(_ action: FindCommand.Action) {
+        switch action {
+        case .show:
+            editorFindVisible = true
+            editorFindShowsReplace = false
+            editorFindFocusToken = UUID()
+        case .showReplace:
+            editorFindVisible = true
+            editorFindShowsReplace = true
+            editorFindFocusToken = UUID()
+        case .next, .previous:
+            if editorFindVisible {
+                editorFindNavigation = FindCommand(action)
+            } else {
+                editorFindVisible = true
+                editorFindFocusToken = UUID()
+            }
+        }
+    }
+
+    private func dismissEditorFind(refocusEditor: Bool = false) {
+        editorFindVisible = false
+        editorFindQuery = ""
+        editorFindNavigation = nil
+        editorReplaceCommand = nil
+        editorMatchTotal = 0
+        editorMatchIndex = 0
+        if refocusEditor {
+            editorSurfaceFocusToken = UUID()
+        }
+    }
+
+    private func handlePreviewFindAction(_ action: FindCommand.Action) {
+        switch action {
+        case .show, .showReplace:
+            // Replace is unavailable in preview; both just open the find bar.
+            previewFindVisible = true
+            previewFindFocusToken = UUID()
+        case .next, .previous:
+            if previewFindVisible {
+                previewFindNavigation = FindCommand(action)
+            }
+        }
+    }
+
+    private func dismissPreviewFind(refocusPreview: Bool = false) {
+        previewFindVisible = false
+        previewFindQuery = ""
+        previewFindNavigation = nil
+        previewMatchTotal = 0
+        previewMatchIndex = 0
+        if refocusPreview {
+            previewSurfaceFocusToken = UUID()
+        }
+    }
+
+    /// Localized "i of n" match status, "No results", or empty when idle.
+    private var previewStatusText: String {
+        matchStatusText(query: previewFindQuery, total: previewMatchTotal, index: previewMatchIndex)
+    }
+
+    private var editorStatusText: String {
+        matchStatusText(query: editorFindQuery, total: editorMatchTotal, index: editorMatchIndex)
+    }
+
+    private func matchStatusText(query: String, total: Int, index: Int) -> String {
+        if query.isEmpty { return "" }
+        if total == 0 { return settings.text(.noResults) }
+        return String(format: settings.text(.matchStatus), index, total)
+    }
+
     /// Switches mode, first resolving the outgoing view's anchor to a target on
     /// the incoming view. The anchor is set on `document` *before* `mode` flips,
     /// so the freshly-created destination view already knows where to land when
@@ -146,25 +259,75 @@ struct ContentView: View {
     private var editorSurface: some View {
         switch mode {
         case .write:
-            MarkdownEditorView(
-                text: $document.text,
-                jumpLine: $document.jumpLine,
-                jumpFraction: $document.jumpFraction,
-                onAnchorLineChange: { editorAnchorLine = $0 },
-                onEnterPreview: { requestMode(.read) }
-            )
+            ZStack(alignment: .top) {
+                MarkdownEditorView(
+                    text: $document.text,
+                    jumpLine: $document.jumpLine,
+                    jumpFraction: $document.jumpFraction,
+                    onAnchorLineChange: { editorAnchorLine = $0 },
+                    onEnterPreview: { requestMode(.read) },
+                    findQuery: $editorFindQuery,
+                    findNavigation: $editorFindNavigation,
+                    findReplacement: $editorFindReplacement,
+                    replaceCommand: $editorReplaceCommand,
+                    focusToken: editorSurfaceFocusToken,
+                    onFindShortcut: handleEditorFindAction(_:),
+                    onFindResult: { total, index in
+                        editorMatchTotal = total
+                        editorMatchIndex = index
+                    }
+                )
+
+                if editorFindVisible {
+                    EditorFindBar(
+                        query: $editorFindQuery,
+                        replacement: $editorFindReplacement,
+                        showsReplace: editorFindShowsReplace,
+                        focusToken: editorFindFocusToken,
+                        statusText: editorStatusText,
+                        settings: settings,
+                        onNext: { editorFindNavigation = FindCommand(.next) },
+                        onPrevious: { editorFindNavigation = FindCommand(.previous) },
+                        onReplace: { editorReplaceCommand = FindReplaceCommand(.current) },
+                        onReplaceAll: { editorReplaceCommand = FindReplaceCommand(.all) },
+                        onClose: { dismissEditorFind(refocusEditor: true) }
+                    )
+                }
+            }
         case .read:
-            MarkdownPreviewView(
-                html: document.rendered.html,
-                baseURL: document.baseURL,
-                jumpHeadingID: $document.jumpHeadingID,
-                jumpFraction: $document.jumpFraction,
-                onAnchorChange: { id, fraction in
-                    previewAnchorID = id
-                    previewAnchorFraction = fraction
-                },
-                onEnterEdit: { requestMode(.write) }
-            )
+            ZStack(alignment: .top) {
+                MarkdownPreviewView(
+                    html: document.rendered.html,
+                    baseURL: document.baseURL,
+                    jumpHeadingID: $document.jumpHeadingID,
+                    jumpFraction: $document.jumpFraction,
+                    onAnchorChange: { id, fraction in
+                        previewAnchorID = id
+                        previewAnchorFraction = fraction
+                    },
+                    onEnterEdit: { requestMode(.write) },
+                    findQuery: $previewFindQuery,
+                    findNavigation: $previewFindNavigation,
+                    focusToken: previewSurfaceFocusToken,
+                    onFindShortcut: handlePreviewFindAction(_:),
+                    onFindResult: { total, index in
+                        previewMatchTotal = total
+                        previewMatchIndex = index
+                    }
+                )
+
+                if previewFindVisible {
+                    PreviewFindBar(
+                        query: $previewFindQuery,
+                        focusToken: previewFindFocusToken,
+                        statusText: previewStatusText,
+                        settings: settings,
+                        onNext: { previewFindNavigation = FindCommand(.next) },
+                        onPrevious: { previewFindNavigation = FindCommand(.previous) },
+                        onClose: { dismissPreviewFind(refocusPreview: true) }
+                    )
+                }
+            }
         }
     }
 }

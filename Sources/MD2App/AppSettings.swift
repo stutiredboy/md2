@@ -99,6 +99,16 @@ enum L10nKey: String {
     case unsavedChangesMessage
     case cancel
     case dontSave
+    case find
+    case findNext
+    case findPrevious
+    case findReplace
+    case findPlaceholder
+    case replace
+    case replaceAll
+    case closeFind
+    case matchStatus
+    case noResults
 }
 
 enum L10n {
@@ -141,7 +151,17 @@ enum L10n {
         .unsavedChangesTitle: "Save changes before closing?",
         .unsavedChangesMessage: "This document has unsaved changes.",
         .cancel: "Cancel",
-        .dontSave: "Don't Save"
+        .dontSave: "Don't Save",
+        .find: "Find…",
+        .findNext: "Find Next",
+        .findPrevious: "Find Previous",
+        .findReplace: "Find and Replace…",
+        .findPlaceholder: "Find",
+        .replace: "Replace",
+        .replaceAll: "Replace All",
+        .closeFind: "Close find bar",
+        .matchStatus: "%d of %d",
+        .noResults: "No results"
     ]
 
     private static let zhHans: [L10nKey: String] = [
@@ -174,6 +194,16 @@ enum L10n {
         .unsavedChangesTitle: "关闭前保存更改？",
         .unsavedChangesMessage: "当前文档还有未保存的更改。",
         .cancel: "取消",
-        .dontSave: "不保存"
+        .dontSave: "不保存",
+        .find: "查找…",
+        .findNext: "查找下一个",
+        .findPrevious: "查找上一个",
+        .findReplace: "查找与替换…",
+        .findPlaceholder: "查找",
+        .replace: "替换",
+        .replaceAll: "全部替换",
+        .closeFind: "关闭查找栏",
+        .matchStatus: "第 %d 个，共 %d 个",
+        .noResults: "无结果"
     ]
 }

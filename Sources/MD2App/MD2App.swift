@@ -39,6 +39,29 @@ struct MD2Application: App {
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
             }
+
+            CommandGroup(after: .textEditing) {
+                Divider()
+                Button(appDelegate.settings.text(.find)) {
+                    appDelegate.currentDocumentStore?.requestFind(.show)
+                }
+                .keyboardShortcut("f")
+
+                Button(appDelegate.settings.text(.findReplace)) {
+                    appDelegate.currentDocumentStore?.requestFind(.showReplace)
+                }
+                .keyboardShortcut("f", modifiers: [.command, .option])
+
+                Button(appDelegate.settings.text(.findNext)) {
+                    appDelegate.currentDocumentStore?.requestFind(.next)
+                }
+                .keyboardShortcut("g")
+
+                Button(appDelegate.settings.text(.findPrevious)) {
+                    appDelegate.currentDocumentStore?.requestFind(.previous)
+                }
+                .keyboardShortcut("g", modifiers: [.command, .shift])
+            }
         }
     }
 }
