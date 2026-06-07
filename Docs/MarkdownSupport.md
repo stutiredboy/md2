@@ -21,10 +21,10 @@ Markdown2 aims for a compact Typora-like writing and reading flow. It does not c
 - Math: inline TeX `$...$` and display TeX `$$...$$` (single- and multi-line), typeset offline with bundled KaTeX, including the mhchem extension for chemistry expressions such as `\ce{H2SO4}`. Currency text (`$5`), escaped `\$`, and `$` inside code are left literal. Note: KaTeX supports a subset of LaTeX, so commands outside that subset render as an inline error rather than typeset output.
 - Diagrams: `mermaid`, `flow` (flowchart.js), and `sequence` (js-sequence-diagrams) fenced code blocks, rendered offline with bundled engine assets in the Read-mode preview. Invalid diagram source falls back to showing its raw text instead of blanking the preview. Other code-fence languages are unaffected.
 - CJK text in headings, paragraphs, tables, and inline styles.
+- Footnotes: `[^id]` references and `[^id]: definition` blocks, with superscript links, numbered in order of first reference, and a trailing footnotes section with back-reference arrows.
 
 ## Not Yet Supported
 
-- Footnotes.
 - Semantic syntax analysis, compiler-aware highlighting, and language-server features.
 - Typora image upload, drag/drop insertion, image resize UI, and configurable image root paths.
 - Import/export formats such as PDF, DOCX, LaTeX, Epub.
