@@ -8,9 +8,19 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// Mode applied to documents opened from a file (file argument, Open panel,
+    /// Finder). New/blank documents use `newDocumentMode` instead.
     @Published var defaultMode: EditorMode {
         didSet {
             defaults.set(defaultMode.rawValue, forKey: Keys.defaultMode)
+        }
+    }
+
+    /// Mode applied to new/blank documents (direct launch, New, reopen with no
+    /// windows). Defaults to Edit so launching the app lands on a writable surface.
+    @Published var newDocumentMode: EditorMode {
+        didSet {
+            defaults.set(newDocumentMode.rawValue, forKey: Keys.newDocumentMode)
         }
     }
 
@@ -31,11 +41,21 @@ final class AppSettings: ObservableObject {
         let modeValue = defaults.string(forKey: Keys.defaultMode) ?? EditorMode.write.rawValue
         defaultMode = EditorMode(rawValue: modeValue) ?? .write
 
+        let newModeValue = defaults.string(forKey: Keys.newDocumentMode) ?? EditorMode.write.rawValue
+        newDocumentMode = EditorMode(rawValue: newModeValue) ?? .write
+
         if defaults.object(forKey: Keys.showsOutlineByDefault) == nil {
             showsOutlineByDefault = true
         } else {
             showsOutlineByDefault = defaults.bool(forKey: Keys.showsOutlineByDefault)
         }
+    }
+
+    /// Resolves the initial editor mode for a document from whether it is backed
+    /// by a file: opened files follow `defaultMode`, new/blank documents follow
+    /// `newDocumentMode`.
+    func presentationMode(isFileBacked: Bool) -> EditorMode {
+        isFileBacked ? defaultMode : newDocumentMode
     }
 
     var effectiveLanguage: AppLanguage {
@@ -55,6 +75,7 @@ final class AppSettings: ObservableObject {
 private enum Keys {
     static let language = "MD2.Language"
     static let defaultMode = "MD2.DefaultMode"
+    static let newDocumentMode = "MD2.NewDocumentMode"
     static let showsOutlineByDefault = "MD2.ShowsOutlineByDefault"
 }
 
@@ -73,6 +94,7 @@ enum L10nKey: String {
     case open
     case save
     case saveAs
+    case close
     case outline
     case noHeadings
     case hideOutline
@@ -92,6 +114,7 @@ enum L10nKey: String {
     case english
     case chineseSimplified
     case defaultOpenMode
+    case newDocumentMode
     case showOutlineByDefault
     case general
     case preferences
@@ -126,6 +149,7 @@ enum L10n {
         .open: "Open...",
         .save: "Save",
         .saveAs: "Save As...",
+        .close: "Close",
         .outline: "Outline",
         .noHeadings: "No headings",
         .hideOutline: "Hide outline",
@@ -144,7 +168,8 @@ enum L10n {
         .followSystem: "Follow System",
         .english: "English",
         .chineseSimplified: "Simplified Chinese",
-        .defaultOpenMode: "Default Open Mode",
+        .defaultOpenMode: "Mode When Opening a File",
+        .newDocumentMode: "Mode for New Documents",
         .showOutlineByDefault: "Show Outline by Default",
         .general: "General",
         .preferences: "Settings",
@@ -169,6 +194,7 @@ enum L10n {
         .open: "打开...",
         .save: "保存",
         .saveAs: "另存为...",
+        .close: "关闭",
         .outline: "大纲",
         .noHeadings: "没有标题",
         .hideOutline: "隐藏大纲",
@@ -187,7 +213,8 @@ enum L10n {
         .followSystem: "跟随系统",
         .english: "英语",
         .chineseSimplified: "简体中文",
-        .defaultOpenMode: "默认打开模式",
+        .defaultOpenMode: "打开文件时的模式",
+        .newDocumentMode: "新建文档时的模式",
         .showOutlineByDefault: "默认显示大纲",
         .general: "通用",
         .preferences: "设置",

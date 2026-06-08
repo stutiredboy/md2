@@ -38,7 +38,7 @@ let package = Package(
         ),
         .testTarget(
             name: "MD2CoreTests",
-            dependencies: ["MD2Core", "MD2AppSupport"]
+            dependencies: ["MD2Core", "MD2AppSupport", "MD2App"]
         )
     ]
 )

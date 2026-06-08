@@ -39,7 +39,7 @@ struct ContentView: View {
         self.document = document
         self.settings = settings
         self.onOpen = onOpen
-        _mode = State(initialValue: settings.defaultMode)
+        _mode = State(initialValue: settings.presentationMode(isFileBacked: document.fileURL != nil))
         _showsOutline = State(initialValue: settings.showsOutlineByDefault)
     }
 
@@ -123,7 +123,7 @@ struct ContentView: View {
     }
 
     private func applyDefaultPresentation() {
-        mode = settings.defaultMode
+        mode = settings.presentationMode(isFileBacked: document.fileURL != nil)
         showsOutline = settings.showsOutlineByDefault
     }
 

@@ -38,6 +38,13 @@ struct MD2Application: App {
                     appDelegate.currentDocumentStore?.saveAs()
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
+
+                Divider()
+
+                Button(appDelegate.settings.text(.close)) {
+                    appDelegate.closeCurrentDocument()
+                }
+                .keyboardShortcut("w")
             }
 
             CommandGroup(after: .textEditing) {

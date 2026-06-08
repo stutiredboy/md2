@@ -60,6 +60,24 @@ final class MD2AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         makeDocumentWindow(store: DocumentStore()).window.makeKeyAndOrderFront(nil)
     }
 
+    /// Closes the frontmost document window in response to ⌘W. Routing through
+    /// `performClose(_:)` (rather than `close()`) drives the window through
+    /// `windowShouldClose(_:)`, so the existing unsaved-changes prompt runs and
+    /// no save/discard logic is duplicated. No-ops safely when no document
+    /// window is focused.
+    func closeCurrentDocument() {
+        let target: NSWindow?
+        if let keyWindow = NSApp.keyWindow {
+            // Only act when the focused window is one of our document windows;
+            // when something else is key (e.g. Settings) leave documents alone.
+            target = documentWindows.first(where: { $0.window == keyWindow })?.window
+        } else {
+            // No key window at all — fall back to the most recent document window.
+            target = documentWindows.first?.window
+        }
+        target?.performClose(nil)
+    }
+
     /// Presents an open panel and loads every selected file, each in its own window.
     func openDocument() {
         let panel = NSOpenPanel()

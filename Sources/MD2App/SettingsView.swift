@@ -19,6 +19,12 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
 
+                Picker(settings.text(.newDocumentMode), selection: $settings.newDocumentMode) {
+                    Text(settings.text(.write)).tag(EditorMode.write)
+                    Text(settings.text(.read)).tag(EditorMode.read)
+                }
+                .pickerStyle(.segmented)
+
                 Toggle(settings.text(.showOutlineByDefault), isOn: $settings.showsOutlineByDefault)
             }
         }
