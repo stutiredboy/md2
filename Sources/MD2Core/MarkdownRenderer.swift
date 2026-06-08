@@ -187,7 +187,7 @@ public struct MarkdownRenderer: Sendable {
     /// from the reader until the engine renders (or fails), avoiding a raw-source
     /// flash before the SVG arrives.
     private func diagramHTML(kind: DiagramKind, source: String) -> String {
-        "<div class=\"diagram \(kind.cssClass) diagram-pending\">\(escapeHTML(source.trimmingCharacters(in: .newlines)))</div>"
+        "<div class=\"\(PreviewClass.diagram) \(kind.cssClass) \(PreviewClass.diagramPending)\">\(escapeHTML(source.trimmingCharacters(in: .newlines)))</div>"
     }
 
     private func indentedCodeBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int)? {
@@ -260,7 +260,7 @@ public struct MarkdownRenderer: Sendable {
     /// Emits a display-math wrapper carrying the raw TeX as HTML-escaped text
     /// content so the math engine can read it verbatim from the DOM.
     private func mathDisplayHTML(_ tex: String) -> String {
-        "<div class=\"math math-display\">\(escapeHTML(tex.trimmingCharacters(in: .whitespacesAndNewlines)))</div>"
+        "<div class=\"\(PreviewClass.math) \(PreviewClass.mathDisplay)\">\(escapeHTML(tex.trimmingCharacters(in: .whitespacesAndNewlines)))</div>"
     }
 
     private func setextHeadingBlock(
@@ -744,94 +744,141 @@ public struct MarkdownRenderer: Sendable {
         return cells
     }
 
+    /// Renders inline Markdown by running an explicit, ordered pipeline of passes.
+    /// The order is load-bearing: fragments that must survive HTML-escaping and the
+    /// later passes (code, math, entities, autolinks, raw HTML, footnote anchors)
+    /// are swapped for placeholder tokens up front; the text is escaped once; the
+    /// emphasis/image/link passes then run on escaped text; finally the protected
+    /// fragments are restored. Each pass is a named method below, so adding a new
+    /// inline construct means inserting one entry at the right point in this list.
     private func inlineHTML(_ markdown: String, footnotes: FootnoteContext? = nil) -> String {
-        var protectedFragments: [String] = []
-        func protect(_ fragment: String) -> String {
-            let token = "\u{E000}MD2-\(protectedFragments.count)\u{E000}"
-            protectedFragments.append(fragment)
-            return token
-        }
+        let protector = InlineProtector()
 
-        var text = replaceMatches(in: markdown, pattern: #"`([^`]+)`"#) { match, source in
+        let pipeline: [(String) -> String] = [
+            { protectCodeSpans($0, protector: protector) },
+            { protectBackslashEscapes($0, protector: protector) },
+            { protectInlineMath($0, protector: protector) },
+            { protectHTMLEntities($0, protector: protector) },
+            { protectAutolinks($0, protector: protector) },
+            { protectRawHTML($0, protector: protector) },
+            { applyFootnoteReferences($0, protector: protector, footnotes: footnotes) },
+            { escapeHTML($0) },
+            { renderEmphasis($0) },
+            { renderImages($0) },
+            { renderLinks($0) }
+        ]
+
+        let transformed = pipeline.reduce(markdown) { text, pass in pass(text) }
+        return protector.restore(in: transformed)
+    }
+
+    /// Inline code spans `` `...` ``. The inner text is escaped and the whole span
+    /// is protected so later passes never reinterpret code content.
+    private func protectCodeSpans(_ text: String, protector: InlineProtector) -> String {
+        replaceMatches(in: text, pattern: #"`([^`]+)`"#) { match, source in
             guard let codeRange = Range(match.range(at: 1), in: source) else {
                 return matchText(match, in: source)
             }
 
-            return protect("<code>\(escapeHTML(String(source[codeRange])))</code>")
+            return protector.protect("<code>\(escapeHTML(String(source[codeRange])))</code>")
         }
+    }
 
-        text = replaceMatches(in: text, pattern: ##"\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])"##) { match, source in
+    /// Backslash-escaped punctuation (`\*`, `\_`, …); the escaped character is
+    /// protected so it survives as a literal.
+    private func protectBackslashEscapes(_ text: String, protector: InlineProtector) -> String {
+        replaceMatches(in: text, pattern: ##"\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])"##) { match, source in
             guard let escapedRange = Range(match.range(at: 1), in: source) else {
                 return matchText(match, in: source)
             }
 
-            return protect(escapeHTML(String(source[escapedRange])))
+            return protector.protect(escapeHTML(String(source[escapedRange])))
         }
+    }
 
-        // Inline math: `$...$`. Runs after code and backslash-escape protection so
-        // `$` inside code or an escaped `\$` is never treated as a delimiter. The
-        // opening `$` must not be followed by whitespace, the closing `$` must not
-        // be preceded by whitespace, and `$$` (display math) is excluded.
-        text = replaceMatches(in: text, pattern: #"(?<!\$)\$(?![\s$])((?:[^$])+?)(?<!\s)\$(?!\$)"#) { match, source in
+    /// Inline math `$...$`. Runs after code and backslash-escape protection so `$`
+    /// inside code or an escaped `\$` is never treated as a delimiter. The opening
+    /// `$` must not be followed by whitespace, the closing `$` must not be preceded
+    /// by whitespace, and `$$` (display math) is excluded.
+    private func protectInlineMath(_ text: String, protector: InlineProtector) -> String {
+        replaceMatches(in: text, pattern: #"(?<!\$)\$(?![\s$])((?:[^$])+?)(?<!\s)\$(?!\$)"#) { match, source in
             guard let range = Range(match.range(at: 1), in: source) else {
                 return matchText(match, in: source)
             }
 
-            return protect("<span class=\"math math-inline\">\(escapeHTML(String(source[range])))</span>")
+            return protector.protect("<span class=\"\(PreviewClass.math) \(PreviewClass.mathInline)\">\(escapeHTML(String(source[range])))</span>")
         }
+    }
 
-        text = replaceMatches(in: text, pattern: #"&(?:#\d+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);"#) { match, source in
-            protect(matchText(match, in: source))
+    /// Pre-existing HTML entities (`&amp;`, `&#960;`, …), protected so the later
+    /// `escapeHTML` pass does not double-escape the ampersand.
+    private func protectHTMLEntities(_ text: String, protector: InlineProtector) -> String {
+        replaceMatches(in: text, pattern: #"&(?:#\d+|#x[0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]+);"#) { match, source in
+            protector.protect(matchText(match, in: source))
         }
+    }
 
-        text = replaceMatches(in: text, pattern: #"<((?:https?|mailto):[^>\s]+)>"#) { match, source in
+    /// Angle-bracket autolinks `<https://…>` / `<mailto:…>`, rendered to an anchor
+    /// and protected.
+    private func protectAutolinks(_ text: String, protector: InlineProtector) -> String {
+        replaceMatches(in: text, pattern: #"<((?:https?|mailto):[^>\s]+)>"#) { match, source in
             guard let urlRange = Range(match.range(at: 1), in: source) else {
                 return matchText(match, in: source)
             }
 
             let url = String(source[urlRange])
-            return protect("<a href=\"\(escapeAttribute(url))\">\(escapeHTML(url))</a>")
+            return protector.protect("<a href=\"\(escapeAttribute(url))\">\(escapeHTML(url))</a>")
+        }
+    }
+
+    /// A small whitelist of raw inline HTML tags, passed through verbatim (and
+    /// protected) so authors can use them while everything else is escaped.
+    private func protectRawHTML(_ text: String, protector: InlineProtector) -> String {
+        replaceMatches(in: text, pattern: #"</?(?:abbr|b|br|cite|code|del|details|div|em|i|img|kbd|mark|small|span|strong|sub|summary|sup|u)(?:\s+[^<>]*)?/?>"#) { match, source in
+            protector.protect(matchText(match, in: source))
+        }
+    }
+
+    /// Footnote references `[^id]`. Runs after code/HTML protection so footnote
+    /// syntax inside inline code is never matched, and only ids that have a
+    /// collected definition become links — others fall through as literal text.
+    /// Rebuilds left-to-right so duplicate reference anchors follow reading order;
+    /// each produced anchor is protected so HTML-escaping leaves it intact.
+    private func applyFootnoteReferences(_ text: String, protector: InlineProtector, footnotes: FootnoteContext?) -> String {
+        guard let footnotes, footnotes.hasDefinitions,
+              let regex = try? NSRegularExpression(pattern: #"\[\^([^\]\s]+)\]"#) else {
+            return text
         }
 
-        text = replaceMatches(in: text, pattern: #"</?(?:abbr|b|br|cite|code|del|details|div|em|i|img|kbd|mark|small|span|strong|sub|summary|sup|u)(?:\s+[^<>]*)?/?>"#) { match, source in
-            protect(matchText(match, in: source))
-        }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        let matches = regex.matches(in: text, range: range)
+        var rebuilt = ""
+        var cursor = text.startIndex
 
-        // Footnote references `[^id]`. Runs after code/HTML protection so footnote
-        // syntax inside inline code is never matched, and only ids that have a
-        // collected definition become links — others fall through as literal text.
-        // Rebuild left-to-right so duplicate reference anchors follow reading order.
-        // The produced anchor is protected so HTML-escaping leaves it intact.
-        if let footnotes, footnotes.hasDefinitions {
-            let referencePattern = #"\[\^([^\]\s]+)\]"#
-            if let regex = try? NSRegularExpression(pattern: referencePattern) {
-                let range = NSRange(text.startIndex..<text.endIndex, in: text)
-                let matches = regex.matches(in: text, range: range)
-                var rebuilt = ""
-                var cursor = text.startIndex
+        for match in matches {
+            guard let matchRange = Range(match.range, in: text) else { continue }
+            rebuilt += text[cursor..<matchRange.lowerBound]
 
-                for match in matches {
-                    guard let matchRange = Range(match.range, in: text) else { continue }
-                    rebuilt += text[cursor..<matchRange.lowerBound]
-
-                    if let labelRange = Range(match.range(at: 1), in: text),
-                       let reference = footnotes.registerReference(String(text[labelRange])) {
-                        rebuilt += protect(
-                            "<sup class=\"footnote-ref\"><a id=\"\(reference.refAnchor)\" href=\"#\(reference.defAnchor)\">\(reference.number)</a></sup>"
-                        )
-                    } else {
-                        rebuilt += text[matchRange]
-                    }
-
-                    cursor = matchRange.upperBound
-                }
-
-                rebuilt += text[cursor...]
-                text = rebuilt
+            if let labelRange = Range(match.range(at: 1), in: text),
+               let reference = footnotes.registerReference(String(text[labelRange])) {
+                rebuilt += protector.protect(
+                    "<sup class=\"footnote-ref\"><a id=\"\(reference.refAnchor)\" href=\"#\(reference.defAnchor)\">\(reference.number)</a></sup>"
+                )
+            } else {
+                rebuilt += text[matchRange]
             }
+
+            cursor = matchRange.upperBound
         }
 
-        text = escapeHTML(text)
+        rebuilt += text[cursor...]
+        return rebuilt
+    }
+
+    /// Bold/italic/strikethrough in precedence order (triple before double before
+    /// single, for both `*` and `_`, plus `~~`). Runs on already-escaped text.
+    private func renderEmphasis(_ text: String) -> String {
+        var text = text
 
         text = replaceMatches(in: text, pattern: #"\*\*\*(.+?)\*\*\*"#) { match, source in
             guard let range = Range(match.range(at: 1), in: source) else { return matchText(match, in: source) }
@@ -868,7 +915,13 @@ public struct MarkdownRenderer: Sendable {
             return "<em>\(source[range])</em>"
         }
 
-        text = replaceMatches(in: text, pattern: #"!\[([^\]]*)\]\((\S+?)(?:\s+&quot;(.+?)&quot;)?\)"#) { match, source in
+        return text
+    }
+
+    /// Inline images `![alt](src "title")`, optionally wrapped in a sized frame
+    /// when the URL encodes dimensions so the browser can reserve space.
+    private func renderImages(_ text: String) -> String {
+        replaceMatches(in: text, pattern: #"!\[([^\]]*)\]\((\S+?)(?:\s+&quot;(.+?)&quot;)?\)"#) { match, source in
             guard let altRange = Range(match.range(at: 1), in: source),
                   let srcRange = Range(match.range(at: 2), in: source) else {
                 return matchText(match, in: source)
@@ -890,11 +943,22 @@ public struct MarkdownRenderer: Sendable {
             let sizedImage = "<img src=\"\(src)\" alt=\"\(source[altRange])\"\(title) width=\"\(dimensions.width)\" height=\"\(dimensions.height)\">"
             return "<span class=\"image-frame\" style=\"width: \(dimensions.width)px; aspect-ratio: \(dimensions.width) / \(dimensions.height);\">\(sizedImage)</span>"
         }
+    }
 
-        text = replaceMatches(in: text, pattern: #"\[([^\]]+)\]\((\S+?)(?:\s+&quot;(.+?)&quot;)?\)"#) { match, source in
+    /// Inline links `[label](href "title")`. Links whose scheme could execute
+    /// script are dropped, keeping the label as inert text.
+    private func renderLinks(_ text: String) -> String {
+        replaceMatches(in: text, pattern: #"\[([^\]]+)\]\((\S+?)(?:\s+&quot;(.+?)&quot;)?\)"#) { match, source in
             guard let labelRange = Range(match.range(at: 1), in: source),
                   let hrefRange = Range(match.range(at: 2), in: source) else {
                 return matchText(match, in: source)
+            }
+
+            // Drop links whose scheme could execute script (javascript:, etc.),
+            // keeping the visible label as inert text so the content survives.
+            let href = String(source[hrefRange])
+            guard !isDangerousLinkHref(href) else {
+                return String(source[labelRange])
             }
 
             let title: String
@@ -904,14 +968,8 @@ public struct MarkdownRenderer: Sendable {
                 title = ""
             }
 
-            return "<a href=\"\(source[hrefRange])\"\(title)>\(source[labelRange])</a>"
+            return "<a href=\"\(href)\"\(title)>\(source[labelRange])</a>"
         }
-
-        for (index, fragment) in protectedFragments.enumerated() {
-            text = text.replacingOccurrences(of: "\u{E000}MD2-\(index)\u{E000}", with: fragment)
-        }
-
-        return text
     }
 
     /// Infers image dimensions from common placeholder/CDN URL segments such as
@@ -1238,15 +1296,15 @@ public struct MarkdownRenderer: Sendable {
         <script>
         (function () {
             if (typeof katex === "undefined") { return; }
-            var nodes = document.querySelectorAll(".math-inline, .math-display");
+            var nodes = document.querySelectorAll(".\(PreviewClass.mathInline), .\(PreviewClass.mathDisplay)");
             for (var i = 0; i < nodes.length; i++) {
                 var el = nodes[i];
                 var tex = el.textContent;
-                var display = el.classList.contains("math-display");
+                var display = el.classList.contains("\(PreviewClass.mathDisplay)");
                 try {
                     katex.render(tex, el, { displayMode: display, throwOnError: false });
                 } catch (err) {
-                    el.classList.add("math-error");
+                    el.classList.add("\(PreviewClass.mathError)");
                     el.textContent = tex;
                 }
             }
@@ -1264,9 +1322,9 @@ public struct MarkdownRenderer: Sendable {
     /// unless a `mermaid` block is present. Shared dependencies are emitted once,
     /// in dependency order, before the engines that consume them.
     private func diagramScripts(for body: String) -> String {
-        let hasMermaid = body.contains("diagram-mermaid")
-        let hasFlow = body.contains("diagram-flow")
-        let hasSequence = body.contains("diagram-sequence")
+        let hasMermaid = body.contains(PreviewClass.diagramMermaid)
+        let hasFlow = body.contains(PreviewClass.diagramFlow)
+        let hasSequence = body.contains(PreviewClass.diagramSequence)
 
         guard hasMermaid || hasFlow || hasSequence else { return "" }
 
@@ -1310,18 +1368,18 @@ public struct MarkdownRenderer: Sendable {
         // once an engine has populated the element, on the error/fallback path,
         // and when an engine is unavailable — so a block is never left blank.
         function reveal(el) {
-            el.classList.remove("diagram-pending");
-            el.classList.add("diagram-ready");
+            el.classList.remove("\(PreviewClass.diagramPending)");
+            el.classList.add("\(PreviewClass.diagramReady)");
         }
 
         function fail(el, source) {
-            el.classList.add("diagram-error");
+            el.classList.add("\(PreviewClass.diagramError)");
             el.textContent = source;
             reveal(el);
         }
 
         // flowchart.js — depends on the global `flowchart` (+ Raphael).
-        var flows = document.querySelectorAll(".diagram-flow");
+        var flows = document.querySelectorAll(".\(PreviewClass.diagramFlow)");
         for (var i = 0; i < flows.length; i++) {
             var el = flows[i];
             var source = el.textContent;
@@ -1336,7 +1394,7 @@ public struct MarkdownRenderer: Sendable {
         }
 
         // js-sequence-diagrams — depends on the global `Diagram` (+ Underscore, Raphael).
-        var seqs = document.querySelectorAll(".diagram-sequence");
+        var seqs = document.querySelectorAll(".\(PreviewClass.diagramSequence)");
         for (var j = 0; j < seqs.length; j++) {
             var sel = seqs[j];
             var ssource = sel.textContent;
@@ -1351,7 +1409,7 @@ public struct MarkdownRenderer: Sendable {
         }
 
         // Mermaid — self-contained; render explicitly (startOnLoad disabled).
-        var mers = document.querySelectorAll(".diagram-mermaid");
+        var mers = document.querySelectorAll(".\(PreviewClass.diagramMermaid)");
         if (typeof mermaid === "undefined") {
             for (var u = 0; u < mers.length; u++) { reveal(mers[u]); }
         } else if (mers.length) {
@@ -1418,17 +1476,23 @@ public struct MarkdownRenderer: Sendable {
         return String(source[range])
     }
 
+    /// Lowercased URL scheme prefixes that can execute script or smuggle active
+    /// content; inline links using them are rendered as inert text instead of
+    /// anchors. (Plain-prefix match — entity-obfuscated schemes are not
+    /// normalized here; see review notes for the deeper hardening item.)
+    private static let dangerousLinkSchemes = ["javascript:", "vbscript:", "data:"]
+
+    private func isDangerousLinkHref(_ href: String) -> Bool {
+        let normalized = href.trimmingCharacters(in: .whitespaces).lowercased()
+        return Self.dangerousLinkSchemes.contains { normalized.hasPrefix($0) }
+    }
+
     private func escapeHTML(_ source: String) -> String {
-        source
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\"", with: "&quot;")
+        HTMLEscaping.escape(source)
     }
 
     private func escapeAttribute(_ source: String) -> String {
-        escapeHTML(source)
-            .replacingOccurrences(of: "'", with: "&#39;")
+        HTMLEscaping.escapeAttribute(source)
     }
 }
 
@@ -1447,12 +1511,36 @@ private enum DiagramKind: String {
     var cssClass: String {
         switch self {
         case .mermaid:
-            return "diagram-mermaid"
+            return PreviewClass.diagramMermaid
         case .flow:
-            return "diagram-flow"
+            return PreviewClass.diagramFlow
         case .sequence:
-            return "diagram-sequence"
+            return PreviewClass.diagramSequence
         }
+    }
+}
+
+/// Holds the fragments that inline rendering swaps out for placeholder tokens so
+/// they survive HTML-escaping and the later regex passes untouched. A reference
+/// type so the ordered pipeline passes can share one accumulator, then restore
+/// every fragment in one final step.
+private final class InlineProtector {
+    private var fragments: [String] = []
+
+    /// Stores `fragment` and returns the private-use-area token standing in for it.
+    func protect(_ fragment: String) -> String {
+        let token = "\u{E000}MD2-\(fragments.count)\u{E000}"
+        fragments.append(fragment)
+        return token
+    }
+
+    /// Replaces every protection token in `text` with its original fragment.
+    func restore(in text: String) -> String {
+        var result = text
+        for (index, fragment) in fragments.enumerated() {
+            result = result.replacingOccurrences(of: "\u{E000}MD2-\(index)\u{E000}", with: fragment)
+        }
+        return result
     }
 }
 

@@ -1,0 +1,9 @@
+[
+  {
+    "date": "2026-06-08",
+    "mode": "PR Review",
+    "score": 75,
+    "findings": { "critical": 0, "warning": 4, "suggestion": 5 },
+    "scope": "whole codebase (Sources/ — 3 targets, ~4.7k LOC Swift)"
+  }
+]

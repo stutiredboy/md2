@@ -42,7 +42,7 @@ struct ModeSwitchAnchorTests {
         #expect(outline.heading(forID: "missing") == nil)
     }
 
-    // MARK: - line ↔ fraction
+    // MARK: - fraction(forLine:)
 
     @Test func fractionForLineMapsEndpoints() {
         #expect(fraction(forLine: 1, totalLines: 101) == 0)
@@ -58,24 +58,5 @@ struct ModeSwitchAnchorTests {
     @Test func fractionForLineHandlesDegenerateDocuments() {
         #expect(fraction(forLine: 1, totalLines: 1) == 0)
         #expect(fraction(forLine: 5, totalLines: 0) == 0)
-    }
-
-    @Test func lineForFractionMapsEndpoints() {
-        #expect(line(forFraction: 0, totalLines: 101) == 1)
-        #expect(line(forFraction: 1, totalLines: 101) == 101)
-        #expect(line(forFraction: 0.5, totalLines: 101) == 51)
-    }
-
-    @Test func lineForFractionClampsOutOfRange() {
-        #expect(line(forFraction: -1, totalLines: 101) == 1)
-        #expect(line(forFraction: 2, totalLines: 101) == 101)
-    }
-
-    @Test func lineAndFractionRoundTrip() {
-        let totalLines = 200
-        for sourceLine in [1, 37, 100, 150, 200] {
-            let f = fraction(forLine: sourceLine, totalLines: totalLines)
-            #expect(line(forFraction: f, totalLines: totalLines) == sourceLine)
-        }
     }
 }

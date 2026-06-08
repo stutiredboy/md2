@@ -168,11 +168,7 @@ enum SyntaxHighlighter {
     }
 
     private static func escapeHTML(_ source: String) -> String {
-        source
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\"", with: "&quot;")
+        HTMLEscaping.escape(source)
     }
 }
 

@@ -3,14 +3,14 @@ import Foundation
 /// A cross-mode scroll target, captured from the view the user is leaving and
 /// applied to the view they are entering when toggling Write↔Read.
 ///
-/// The three cases mirror the two coordinate spaces plus a fallback:
 /// - ``heading(id:)`` targets the preview by HTML element id.
-/// - ``line(_:)`` targets the editor by 1-based source line.
 /// - ``fraction(_:)`` targets either view proportionally (0...1) when no
 ///   section heading is available to anchor on.
+///
+/// The editor is targeted directly by 1-based source line through a separate
+/// `jumpLine` binding rather than through this enum.
 public enum ModeSwitchAnchor: Equatable, Sendable {
     case heading(id: String)
-    case line(Int)
     case fraction(Double)
 }
 
@@ -42,12 +42,4 @@ public func fraction(forLine line: Int, totalLines: Int) -> Double {
     guard totalLines > 1 else { return 0 }
     let clamped = min(max(line, 1), totalLines)
     return Double(clamped - 1) / Double(totalLines - 1)
-}
-
-/// Maps a 0...1 fraction back to a 1-based source line in a document of
-/// `totalLines` lines. Inverse of ``fraction(forLine:totalLines:)``.
-public func line(forFraction fraction: Double, totalLines: Int) -> Int {
-    guard totalLines > 1 else { return 1 }
-    let clamped = min(max(fraction, 0), 1)
-    return Int((clamped * Double(totalLines - 1)).rounded()) + 1
 }

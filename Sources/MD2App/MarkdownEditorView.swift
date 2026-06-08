@@ -1,4 +1,5 @@
 import AppKit
+import MD2Core
 import SwiftUI
 
 struct MarkdownEditorView: NSViewRepresentable {
@@ -316,7 +317,7 @@ struct MarkdownEditorView: NSViewRepresentable {
             clearFindHighlights(in: textView)
             lastFindQuery = query
             lastIndexedText = textView.string
-            matches = Self.findMatches(query: query, in: textView.string)
+            matches = TextSearch.matches(of: query, in: textView.string)
 
             if matches.isEmpty {
                 currentMatchIndex = -1
@@ -327,31 +328,6 @@ struct MarkdownEditorView: NSViewRepresentable {
             applyFindHighlights(in: textView)
             revealCurrentMatch(in: textView)
             reportFindResult()
-        }
-
-        private static func findMatches(query: String, in text: String) -> [NSRange] {
-            guard !query.isEmpty else { return [] }
-            let source = text as NSString
-            var results: [NSRange] = []
-            var searchRange = NSRange(location: 0, length: source.length)
-
-            while searchRange.length > 0 {
-                let range = source.range(
-                    of: query,
-                    options: [.caseInsensitive, .diacriticInsensitive],
-                    range: searchRange
-                )
-                if range.location == NSNotFound {
-                    break
-                }
-                results.append(range)
-
-                let nextLocation = range.location + max(range.length, 1)
-                let remaining = source.length - nextLocation
-                searchRange = NSRange(location: nextLocation, length: max(0, remaining))
-            }
-
-            return results
         }
 
         @MainActor private func applyFindHighlights(in textView: NSTextView) {
@@ -490,11 +466,11 @@ private final class MarkdownSourceTextView: NSTextView {
     }
 
     override func performFindPanelAction(_ sender: Any?) {
-        onFindAction?(findAction(for: sender))
+        onFindAction?(.fromFindMenuItem(sender))
     }
 
     override func performTextFinderAction(_ sender: Any?) {
-        onFindAction?(findAction(for: sender))
+        onFindAction?(.fromFindMenuItem(sender))
     }
 
     private func findAction(for event: NSEvent) -> FindCommand.Action? {
@@ -512,24 +488,6 @@ private final class MarkdownSourceTextView: NSTextView {
             return flags.contains(.shift) ? .previous : .next
         default:
             return nil
-        }
-    }
-
-    private func findAction(for sender: Any?) -> FindCommand.Action {
-        guard let menuItem = sender as? NSMenuItem,
-              let textFinderAction = NSTextFinder.Action(rawValue: menuItem.tag) else {
-            return .show
-        }
-
-        switch textFinderAction {
-        case .nextMatch:
-            return .next
-        case .previousMatch:
-            return .previous
-        case .showReplaceInterface:
-            return .showReplace
-        default:
-            return .show
         }
     }
 }

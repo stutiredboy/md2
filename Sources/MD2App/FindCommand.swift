@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 /// A find action relayed from a menu command to whichever document surface is
@@ -31,5 +32,28 @@ struct FindReplaceCommand: Equatable {
 
     init(_ action: Action) {
         self.action = action
+    }
+}
+
+extension FindCommand.Action {
+    /// Maps a standard Find menu item (whose tag carries an `NSTextFinder.Action`)
+    /// to a find action. Shared by the editor and preview surfaces so both route
+    /// the system Find menu identically. Unknown items fall back to `.show`.
+    static func fromFindMenuItem(_ sender: Any?) -> FindCommand.Action {
+        guard let menuItem = sender as? NSMenuItem,
+              let textFinderAction = NSTextFinder.Action(rawValue: menuItem.tag) else {
+            return .show
+        }
+
+        switch textFinderAction {
+        case .nextMatch:
+            return .next
+        case .previousMatch:
+            return .previous
+        case .showReplaceInterface:
+            return .showReplace
+        default:
+            return .show
+        }
     }
 }

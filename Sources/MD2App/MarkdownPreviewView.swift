@@ -31,6 +31,16 @@ struct MarkdownPreviewView: NSViewRepresentable {
     private static let enterEditMessageName = "enterEdit"
     private static let anchorMessageName = "anchorChange"
 
+    /// Filename pieces for the temporary preview file written alongside the
+    /// document (kept in the document directory so relative image paths resolve
+    /// under the granted read access).
+    private static let previewFilePrefix = ".md2-preview-"
+    private static let previewFileSuffix = ".html"
+    /// Preview files older than this are treated as leftovers from a prior
+    /// session/crash and swept. The age gate keeps a live sibling window's file
+    /// (rewritten on every render) safe.
+    private static let stalePreviewAge: TimeInterval = 3600
+
     func makeNSView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
@@ -396,11 +406,14 @@ struct MarkdownPreviewView: NSViewRepresentable {
             return
         }
 
-        let previewURL = baseURL.appendingPathComponent(".md2-preview-\(coordinator.previewID).html")
+        let previewURL = baseURL.appendingPathComponent(
+            "\(Self.previewFilePrefix)\(coordinator.previewID)\(Self.previewFileSuffix)"
+        )
         do {
             if let previous = coordinator.previewFileURL, previous != previewURL {
                 try? FileManager.default.removeItem(at: previous)
             }
+            sweepStalePreviewFiles(in: baseURL, keeping: previewURL)
             try html.write(to: previewURL, atomically: true, encoding: .utf8)
             coordinator.previewFileURL = previewURL
             // `loadFileRequest(_:allowingReadAccessTo:)` grants read access to the
@@ -410,6 +423,40 @@ struct MarkdownPreviewView: NSViewRepresentable {
             webView.loadFileRequest(request, allowingReadAccessTo: baseURL)
         } catch {
             webView.loadHTMLString(html, baseURL: baseURL)
+        }
+    }
+
+    /// Removes stale `.md2-preview-*.html` leftovers in `directory` — files this
+    /// app wrote in a prior session that a normal teardown would have cleaned but
+    /// a crash/force-quit left behind. Never removes `keeping` (the file about to
+    /// be loaded) or any file modified within `stalePreviewAge`, so a live sibling
+    /// window's preview file is left intact.
+    private func sweepStalePreviewFiles(in directory: URL, keeping: URL) {
+        let fileManager = FileManager.default
+        guard let entries = try? fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: []
+        ) else {
+            return
+        }
+
+        let cutoff = Date().addingTimeInterval(-Self.stalePreviewAge)
+        for url in entries {
+            let name = url.lastPathComponent
+            guard name.hasPrefix(Self.previewFilePrefix),
+                  name.hasSuffix(Self.previewFileSuffix),
+                  url != keeping else {
+                continue
+            }
+
+            let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?
+                .contentModificationDate
+            if let modified, modified > cutoff {
+                continue
+            }
+
+            try? fileManager.removeItem(at: url)
         }
     }
 
@@ -511,15 +558,11 @@ struct MarkdownPreviewView: NSViewRepresentable {
 
             switch anchor {
             case let .heading(id):
-                let escapedID = id
-                    .replacingOccurrences(of: "\\", with: "\\\\")
-                    .replacingOccurrences(of: "'", with: "\\'")
+                let escapedID = MarkdownPreviewView.escapeForJS(id)
                 webView.evaluateJavaScript("window.__md2ScrollToHeading('\(escapedID)');")
             case let .fraction(value):
                 let clamped = min(max(value, 0), 1)
                 webView.evaluateJavaScript("window.__md2ScrollToFraction(\(clamped));")
-            case .line:
-                break
             }
         }
 
@@ -552,11 +595,11 @@ private final class PreviewWebView: WKWebView {
 
     @objc(performFindPanelAction:)
     func md2PerformFindPanelAction(_ sender: Any?) {
-        onFindAction?(findAction(for: sender))
+        onFindAction?(.fromFindMenuItem(sender))
     }
 
     override func performTextFinderAction(_ sender: Any?) {
-        onFindAction?(findAction(for: sender))
+        onFindAction?(.fromFindMenuItem(sender))
     }
 
     private func findAction(for event: NSEvent) -> FindCommand.Action? {
@@ -575,24 +618,6 @@ private final class PreviewWebView: WKWebView {
             return flags.contains(.shift) ? .previous : .next
         default:
             return nil
-        }
-    }
-
-    private func findAction(for sender: Any?) -> FindCommand.Action {
-        guard let menuItem = sender as? NSMenuItem,
-              let textFinderAction = NSTextFinder.Action(rawValue: menuItem.tag) else {
-            return .show
-        }
-
-        switch textFinderAction {
-        case .nextMatch:
-            return .next
-        case .previousMatch:
-            return .previous
-        case .showReplaceInterface:
-            return .showReplace
-        default:
-            return .show
         }
     }
 }
