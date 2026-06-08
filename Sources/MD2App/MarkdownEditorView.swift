@@ -34,7 +34,18 @@ struct MarkdownEditorView: NSViewRepresentable {
         scrollView.drawsBackground = false
         scrollView.autohidesScrollers = true
 
-        let textView = MarkdownSourceTextView()
+        // Build the TextKit 1 stack manually so the editor uses a custom layout
+        // manager that paints continuous code-block backgrounds.
+        let textStorage = NSTextStorage()
+        let layoutManager = CodeBlockLayoutManager()
+        textStorage.addLayoutManager(layoutManager)
+        let textContainer = NSTextContainer(
+            containerSize: NSSize(width: scrollView.contentSize.width, height: .greatestFiniteMagnitude)
+        )
+        textContainer.widthTracksTextView = true
+        layoutManager.addTextContainer(textContainer)
+
+        let textView = MarkdownSourceTextView(frame: .zero, textContainer: textContainer)
         textView.onFindAction = { action in
             context.coordinator.onFindShortcut(action)
         }

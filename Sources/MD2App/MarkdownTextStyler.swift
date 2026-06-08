@@ -30,19 +30,23 @@ enum MarkdownTextStyler {
         source.enumerateSubstrings(
             in: source.startIndex..<source.endIndex,
             options: [.byLines, .substringNotRequired]
-        ) { _, substringRange, _, _ in
+        ) { _, substringRange, enclosingRange, _ in
             let lineRange = NSRange(substringRange, in: source)
+            // The enclosing range includes the line terminator, so the marker
+            // covers newlines and empty lines too — the layout manager then fills
+            // those fragments and the inter-line spacing seamlessly.
+            let fullLineRange = NSRange(enclosingRange, in: source)
             let line = String(source[substringRange])
             let trimmed = line.trimmingCharacters(in: .whitespaces)
 
             if trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~") {
                 activeFence.toggle()
-                addCodeLineStyle(to: storage, range: lineRange)
+                addCodeLineStyle(to: storage, contentRange: lineRange, lineRange: fullLineRange)
                 return
             }
 
             if activeFence {
-                addCodeLineStyle(to: storage, range: lineRange)
+                addCodeLineStyle(to: storage, contentRange: lineRange, lineRange: fullLineRange)
                 return
             }
 
@@ -74,9 +78,12 @@ enum MarkdownTextStyler {
         let string = storage.string
         let full = NSRange(string.startIndex..<string.endIndex, in: string)
 
+        // `[^`\n]+` (not `[^`]+`) keeps inline code on a single line; otherwise the
+        // span runs from a fence's backtick across the whole code block to the next
+        // backtick, painting an uneven overlay over the block panel.
         addRegexAttributes(
             to: storage,
-            pattern: #"`[^`]+`"#,
+            pattern: #"`[^`\n]+`"#,
             attributes: [
                 .font: NSFont.monospacedSystemFont(ofSize: 15, weight: .regular),
                 .backgroundColor: NSColor.textColor.withAlphaComponent(0.08)
@@ -112,11 +119,17 @@ enum MarkdownTextStyler {
         )
     }
 
-    private static func addCodeLineStyle(to storage: NSTextStorage, range: NSRange) {
-        storage.addAttributes([
-            .font: NSFont.monospacedSystemFont(ofSize: 14, weight: .regular),
-            .backgroundColor: NSColor.textColor.withAlphaComponent(0.06)
-        ], range: range)
+    private static func addCodeLineStyle(to storage: NSTextStorage, contentRange: NSRange, lineRange: NSRange) {
+        if contentRange.length > 0 {
+            storage.addAttribute(
+                .font,
+                value: NSFont.monospacedSystemFont(ofSize: 14, weight: .regular),
+                range: contentRange
+            )
+        }
+        // The marker drives the continuous panel drawn by CodeBlockLayoutManager;
+        // applying it over the full line (incl. terminator) keeps the panel gapless.
+        storage.addAttribute(.markdownCodeBlock, value: true, range: lineRange)
     }
 
     private static func headingLevel(in trimmedLine: String) -> Int? {
@@ -161,8 +174,24 @@ enum MarkdownTextStyler {
 
         let string = storage.string
         regex.enumerateMatches(in: string, range: range) { match, _, _ in
-            guard let match else { return }
+            guard let match, match.range.location < storage.length else { return }
+            // Inline markdown is not interpreted inside fenced code, and any
+            // overlay there would break the uniform code-block panel.
+            if rangeIntersectsCodeBlock(match.range, in: storage) {
+                return
+            }
             storage.addAttributes(attributes, range: match.range)
         }
+    }
+
+    private static func rangeIntersectsCodeBlock(_ range: NSRange, in storage: NSTextStorage) -> Bool {
+        var intersectsCodeBlock = false
+        storage.enumerateAttribute(.markdownCodeBlock, in: range, options: []) { value, _, stop in
+            if value != nil {
+                intersectsCodeBlock = true
+                stop.pointee = true
+            }
+        }
+        return intersectsCodeBlock
     }
 }
