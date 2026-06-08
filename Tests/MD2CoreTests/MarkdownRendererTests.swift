@@ -69,4 +69,106 @@ struct MarkdownRendererTests {
 
         #expect(document.html.contains(#"<span class="image-frame" style="width: 200px; aspect-ratio: 200 / 100;"><img src="https://via.placeholder.com/200x100" alt="Sample" title="Placeholder image" width="200" height="100"></span>"#))
     }
+
+    @Test func nestsIndentedUnorderedListItems() {
+        let markdown = """
+        - 空调
+            - 内外机
+            - 安装（铜、电缆）
+            - 人工
+        - 电缆
+        - 配电箱
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        // 空调 owns a nested child list with its three sub-items.
+        #expect(document.html.contains("<li>空调\n<ul>\n<li>内外机</li>"))
+        #expect(document.html.contains("<li>人工</li>\n</ul></li>"))
+        // 电缆 and 配电箱 are siblings of 空调, after the nested list closes.
+        #expect(document.html.contains("</ul></li>\n<li>电缆</li>\n<li>配电箱</li>"))
+    }
+
+    @Test func nestsMultipleLevelsOfLists() {
+        let markdown = """
+        - a
+            - b
+                - c
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<li>a\n<ul>\n<li>b\n<ul>\n<li>c</li>\n</ul></li>\n</ul></li>"))
+    }
+
+    @Test func tabIndentedListItemNestsOneLevel() {
+        let markdown = "- parent\n\t- child"
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<li>parent\n<ul>\n<li>child</li>\n</ul></li>"))
+    }
+
+    @Test func twoSpaceIndentedListItemStaysAtCurrentFourSpaceLevel() {
+        let markdown = """
+        - parent
+          - sibling
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<li>parent</li>\n<li>sibling</li>"))
+        #expect(!document.html.contains("<li>parent\n<ul>"))
+    }
+
+    @Test func dedentClosesNestedListAndContinuesParent() {
+        let markdown = """
+        - a
+            - b
+        - d
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<li>a\n<ul>\n<li>b</li>\n</ul></li>\n<li>d</li>"))
+    }
+
+    @Test func nestedTaskListItemsKeepCheckboxes() {
+        let markdown = """
+        - parent
+            - [x] done
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains(#"<ul class="task-list">\#n<li><input type="checkbox" disabled checked> done</li>"#))
+        // The outer list has no task item, so it is not a task-list.
+        #expect(document.html.contains("<ul>\n<li>parent"))
+    }
+
+    @Test func nestsOrderedListUnderUnorderedItem() {
+        let markdown = """
+        - parent
+            1. step one
+            2. step two
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<li>parent\n<ol>\n<li>step one</li>\n<li>step two</li>\n</ol></li>"))
+    }
+
+    @Test func standaloneIndentedDashRendersAsCodeNotList() {
+        let markdown = """
+        Some paragraph.
+
+            - not a list
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<pre"))
+        #expect(document.html.contains("- not a list"))
+        #expect(!document.html.contains("<li>not a list</li>"))
+    }
 }

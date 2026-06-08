@@ -361,31 +361,83 @@ public struct MarkdownRenderer: Sendable {
     }
 
     private func listBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext) -> (html: String, nextIndex: Int)? {
-        guard let firstItem = parseListItem(lines[startIndex]) else { return nil }
+        guard parseListItem(lines[startIndex]) != nil else { return nil }
 
-        var items: [ListItem] = [firstItem]
-        var index = startIndex + 1
-
+        // Collect the run of consecutive list lines; indented continuation lines
+        // are included so they can become nested child lists.
+        var items: [ListItem] = []
+        var index = startIndex
         while index < lines.count, let item = parseListItem(lines[index]) {
-            guard item.kind == firstItem.kind else { break }
             items.append(item)
             index += 1
         }
 
-        let tag = firstItem.kind == .ordered ? "ol" : "ul"
-        let className = items.contains { $0.checked != nil } ? " class=\"task-list\"" : ""
-        let itemHTML = items.map { item in
+        // A tab or four spaces represents one nesting level.
+        let levels = nestingLevels(for: items)
+
+        let built = buildList(items: items, levels: levels, start: 0, level: levels[0], footnotes: footnotes)
+        return (built.html, startIndex + built.next)
+    }
+
+    /// Derives each item's nesting level from indentation columns, using four
+    /// columns per level and integer division for partial indentation.
+    private func nestingLevels(for items: [ListItem]) -> [Int] {
+        items.map { $0.indent / 4 }
+    }
+
+    /// Recursively builds a (possibly nested) `<ul>`/`<ol>` starting at `start`.
+    /// Items at `level` are siblings; deeper items become child lists nested in
+    /// the preceding sibling's `<li>`. A kind change at the same level ends the
+    /// current list so the remaining items form a separate sibling list.
+    /// Returns the HTML and the index of the first item not consumed.
+    private func buildList(
+        items: [ListItem],
+        levels: [Int],
+        start: Int,
+        level: Int,
+        footnotes: FootnoteContext
+    ) -> (html: String, next: Int) {
+        let kind = items[start].kind
+        let tag = kind == .ordered ? "ol" : "ul"
+        var listItems: [String] = []
+        var hasTask = false
+        var index = start
+
+        while index < items.count {
+            if levels[index] < level { break }
+            if levels[index] == level && items[index].kind != kind { break }
+            if levels[index] > level { break } // defensive: handled below
+
+            let item = items[index]
             let checkbox: String
             if let checked = item.checked {
+                hasTask = true
                 checkbox = "<input type=\"checkbox\" disabled\(checked ? " checked" : "")> "
             } else {
                 checkbox = ""
             }
 
-            return "<li>\(checkbox)\(inlineHTML(item.text, footnotes: footnotes))</li>"
-        }.joined(separator: "\n")
+            var content = "\(checkbox)\(inlineHTML(item.text, footnotes: footnotes))"
+            index += 1
 
-        return ("<\(tag)\(className)>\n\(itemHTML)\n</\(tag)>", index)
+            // Attach any deeper items as nested child lists of this item.
+            while index < items.count, levels[index] > level {
+                let child = buildList(
+                    items: items,
+                    levels: levels,
+                    start: index,
+                    level: levels[index],
+                    footnotes: footnotes
+                )
+                content += "\n\(child.html)"
+                index = child.next
+            }
+
+            listItems.append("<li>\(content)</li>")
+        }
+
+        let className = hasTask ? " class=\"task-list\"" : ""
+        return ("<\(tag)\(className)>\n\(listItems.joined(separator: "\n"))\n</\(tag)>", index)
     }
 
     private func paragraphBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext) -> (html: String, nextIndex: Int) {
@@ -580,6 +632,7 @@ public struct MarkdownRenderer: Sendable {
 
     private func parseListItem(_ line: String) -> ListItem? {
         let trimmed = line.trimmedMarkdownLine
+        let indent = leadingIndentWidth(line)
 
         if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.hasPrefix("+ ") {
             var text = String(trimmed.dropFirst(2))
@@ -593,7 +646,7 @@ public struct MarkdownRenderer: Sendable {
                 text = String(text.dropFirst(4))
             }
 
-            return ListItem(kind: .unordered, checked: checked, text: text)
+            return ListItem(kind: .unordered, checked: checked, text: text, indent: indent)
         }
 
         guard let match = firstMatch(in: trimmed, pattern: #"^\d+[\.)]\s+(.+)$"#),
@@ -601,7 +654,23 @@ public struct MarkdownRenderer: Sendable {
             return nil
         }
 
-        return ListItem(kind: .ordered, checked: nil, text: String(trimmed[textRange]))
+        return ListItem(kind: .ordered, checked: nil, text: String(trimmed[textRange]), indent: indent)
+    }
+
+    /// Counts the leading whitespace of a line in columns, treating a tab as 4
+    /// columns. Used to determine list-item nesting depth.
+    private func leadingIndentWidth(_ line: String) -> Int {
+        var width = 0
+        for character in line {
+            if character == " " {
+                width += 1
+            } else if character == "\t" {
+                width += 4
+            } else {
+                break
+            }
+        }
+        return width
     }
 
     private func tableAlignments(in line: String) -> [TableAlignment]? {
@@ -1391,6 +1460,9 @@ private struct ListItem {
     let kind: ListKind
     let checked: Bool?
     let text: String
+    /// Raw leading-indentation width in columns (a tab counts as 4). Used to
+    /// derive nesting depth when building nested lists.
+    let indent: Int
 }
 
 private enum ListKind: Equatable {
