@@ -132,15 +132,30 @@ struct MarkdownEditorView: NSViewRepresentable {
         }
 
         if let jumpLine {
+            let targetLine = jumpLine
             DispatchQueue.main.async {
-                scroll(to: jumpLine, in: textView)
-                self.jumpLine = nil
-                self.jumpFraction = nil
+                if scroll(to: targetLine, in: textView) {
+                    self.jumpLine = nil
+                    self.jumpFraction = nil
+                } else {
+                    DispatchQueue.main.async {
+                        _ = scroll(to: targetLine, in: textView)
+                        self.jumpLine = nil
+                        self.jumpFraction = nil
+                    }
+                }
             }
         } else if let jumpFraction {
+            let targetFraction = jumpFraction
             DispatchQueue.main.async {
-                scroll(toFraction: jumpFraction, in: scrollView)
-                self.jumpFraction = nil
+                if scroll(toFraction: targetFraction, in: scrollView) {
+                    self.jumpFraction = nil
+                } else {
+                    DispatchQueue.main.async {
+                        _ = scroll(toFraction: targetFraction, in: scrollView)
+                        self.jumpFraction = nil
+                    }
+                }
             }
         }
     }
@@ -156,17 +171,37 @@ struct MarkdownEditorView: NSViewRepresentable {
 
     /// Scrolls the editor to a vertical fraction (0...1) of its content. Used as
     /// the fallback when no source-line anchor is available.
-    private func scroll(toFraction fraction: Double, in scrollView: NSScrollView) {
-        guard let documentView = scrollView.documentView else { return }
+    private func scroll(toFraction fraction: Double, in scrollView: NSScrollView) -> Bool {
+        guard let documentView = scrollView.documentView else { return false }
+        // Settle layout first so the content height reflects the real wrapped
+        // text rather than a freshly created, not-yet-laid-out text view.
+        if let textView = documentView as? NSTextView,
+           let layoutManager = textView.layoutManager,
+           let textContainer = textView.textContainer {
+            layoutManager.ensureLayout(for: textContainer)
+        }
         let clamped = min(max(fraction, 0), 1)
         let visibleHeight = scrollView.contentView.bounds.height
-        let maxOffset = max(0, documentView.bounds.height - visibleHeight)
-        let targetY = maxOffset * CGFloat(clamped)
+        guard visibleHeight > 0 else { return false }
+        let contentHeight = scrollableContentHeight(for: documentView)
+        if contentHeight <= visibleHeight {
+            return true
+        }
+        let maxOffset = max(0, contentHeight - visibleHeight)
+        // Route the desired offset through the shared clamp so a document that
+        // fits the viewport stays at the top (offset 0) instead of scrolling out
+        // of view.
+        let targetY = CGFloat(clampedScrollOffset(
+            targetY: Double(maxOffset * CGFloat(clamped)),
+            contentHeight: Double(contentHeight),
+            viewportHeight: Double(visibleHeight)
+        ))
         scrollView.contentView.scroll(to: NSPoint(x: 0, y: targetY))
         scrollView.reflectScrolledClipView(scrollView.contentView)
+        return true
     }
 
-    private func scroll(to line: Int, in textView: NSTextView) {
+    private func scroll(to line: Int, in textView: NSTextView) -> Bool {
         let lineIndex = max(1, line)
         let string = textView.string as NSString
         var currentLine = 1
@@ -182,9 +217,13 @@ struct MarkdownEditorView: NSViewRepresentable {
         }
 
         let targetRange = NSRange(location: min(location, string.length), length: 0)
-        textView.setSelectedRange(targetRange)
-        scrollLineToTop(charRange: targetRange, in: textView)
+        // Focus first, then scroll last: any caret-reveal scroll that becoming
+        // first responder triggers happens before our explicit clamp-to-top, so
+        // the final resting position is the clamped target (0 when the document
+        // fits the viewport) rather than wherever the focus scroll landed.
         textView.window?.makeFirstResponder(textView)
+        textView.setSelectedRange(targetRange)
+        return scrollLineToTop(charRange: targetRange, in: textView)
     }
 
     /// Scrolls so the given character range sits near the top of the visible
@@ -192,12 +231,12 @@ struct MarkdownEditorView: NSViewRepresentable {
     /// `scrollRangeToVisible`, which only scrolls the minimum amount and leaves
     /// a target below the fold sitting at the bottom. Layout is forced first so
     /// the geometry is valid even on a freshly created text view.
-    private func scrollLineToTop(charRange: NSRange, in textView: NSTextView) {
+    private func scrollLineToTop(charRange: NSRange, in textView: NSTextView) -> Bool {
         guard let layoutManager = textView.layoutManager,
               let textContainer = textView.textContainer,
               let scrollView = textView.enclosingScrollView else {
             textView.scrollRangeToVisible(charRange)
-            return
+            return true
         }
 
         layoutManager.ensureLayout(for: textContainer)
@@ -208,14 +247,24 @@ struct MarkdownEditorView: NSViewRepresentable {
         let origin = textView.textContainerOrigin
         rect.origin.y += origin.y
 
-        let documentHeight = textView.bounds.height
+        let documentHeight = scrollableContentHeight(for: textView)
         let visibleHeight = scrollView.contentView.bounds.height
-        let maxOffset = max(0, documentHeight - visibleHeight)
+        guard visibleHeight > 0 else { return false }
+        if documentHeight <= visibleHeight {
+            return true
+        }
         // Leave a small top margin (the container inset) so the line is not
-        // flush against the very top edge.
-        let targetY = min(max(0, rect.minY - origin.y), maxOffset)
+        // flush against the very top edge. The shared clamp keeps the offset in
+        // the scrollable range and returns 0 when the document fits the viewport,
+        // so a short document stays pinned to the top.
+        let targetY = CGFloat(clampedScrollOffset(
+            targetY: Double(rect.minY - origin.y),
+            contentHeight: Double(documentHeight),
+            viewportHeight: Double(visibleHeight)
+        ))
         scrollView.contentView.scroll(to: NSPoint(x: 0, y: targetY))
         scrollView.reflectScrolledClipView(scrollView.contentView)
+        return true
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {
@@ -452,6 +501,23 @@ struct MarkdownEditorView: NSViewRepresentable {
             textView.selectedRanges = selectedRanges
         }
     }
+}
+
+@MainActor
+private func scrollableContentHeight(for documentView: NSView) -> CGFloat {
+    guard let textView = documentView as? NSTextView,
+          let layoutManager = textView.layoutManager,
+          let textContainer = textView.textContainer else {
+        return documentView.bounds.height
+    }
+
+    layoutManager.ensureLayout(for: textContainer)
+    let usedRect = layoutManager.usedRect(for: textContainer)
+    let measuredHeight = ceil(usedRect.maxY + textView.textContainerInset.height * 2)
+    guard measuredHeight.isFinite, measuredHeight > 0 else {
+        return textView.bounds.height
+    }
+    return measuredHeight
 }
 
 private final class MarkdownSourceTextView: NSTextView {
