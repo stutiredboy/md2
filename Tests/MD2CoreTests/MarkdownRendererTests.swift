@@ -171,4 +171,63 @@ struct MarkdownRendererTests {
         #expect(document.html.contains("- not a list"))
         #expect(!document.html.contains("<li>not a list</li>"))
     }
+
+    @Test func softLineBreaksInParagraphRenderAsBr() {
+        let markdown = """
+        line one
+        line two
+        line three
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<p>line one<br>line two<br>line three</p>"))
+        #expect(!document.html.contains("line one line two"))
+    }
+
+    @Test func multiLineBlockquotePreservesLineBreaks() {
+        let markdown = """
+        > asdfasdf
+        > asdfasdf
+        > asdfasdf
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("asdfasdf<br>asdfasdf<br>asdfasdf"))
+        #expect(!document.html.contains("asdfasdf asdfasdf asdfasdf"))
+    }
+
+    @Test func blankLineSeparatesParagraphsWithoutBridgingBreak() {
+        let markdown = """
+        para one
+
+        para two
+        """
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("<p>para one</p>"))
+        #expect(document.html.contains("<p>para two</p>"))
+        #expect(!document.html.contains("para one<br>"))
+    }
+
+    @Test func backslashHardBreakRemovesMarkerAndEmitsBr() {
+        let markdown = "line one\\\nline two"
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("line one<br>line two"))
+        #expect(!document.html.contains("line one\\"))
+    }
+
+    @Test func trailingSpacesHardBreakRemovesMarkerAndEmitsSingleBr() {
+        let markdown = "line one  \nline two"
+
+        let document = MarkdownRenderer().render(markdown)
+
+        #expect(document.html.contains("line one<br>line two"))
+        #expect(!document.html.contains("line one  <br>"))
+        #expect(!document.html.contains("line one<br><br>line two"))
+    }
 }

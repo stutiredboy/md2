@@ -480,15 +480,16 @@ public struct MarkdownRenderer: Sendable {
                 content = line.trimmingCharacters(in: .whitespaces)
             }
 
-            if hasHardBreak {
-                return "\(inlineHTML(content, footnotes: footnotes))<br>"
-            }
+            let rendered = inlineHTML(content, footnotes: footnotes)
 
-            if index < lines.count - 1 {
-                return "\(inlineHTML(content, footnotes: footnotes)) "
+            // A soft line break (a newline mid-paragraph) renders as a visible
+            // <br>, matching the editor's WYSIWYG expectation; only the
+            // paragraph's final line — when it carries no explicit hard break —
+            // omits the trailing break. Soft and hard breaks thus converge here.
+            if index == lines.count - 1 && !hasHardBreak {
+                return rendered
             }
-
-            return inlineHTML(content, footnotes: footnotes)
+            return "\(rendered)<br>"
         }.joined()
     }
 
@@ -756,8 +757,8 @@ public struct MarkdownRenderer: Sendable {
 
         let pipeline: [(String) -> String] = [
             { protectCodeSpans($0, protector: protector) },
-            { protectBackslashEscapes($0, protector: protector) },
             { protectInlineMath($0, protector: protector) },
+            { protectBackslashEscapes($0, protector: protector) },
             { protectHTMLEntities($0, protector: protector) },
             { protectAutolinks($0, protector: protector) },
             { protectRawHTML($0, protector: protector) },
@@ -796,12 +797,16 @@ public struct MarkdownRenderer: Sendable {
         }
     }
 
-    /// Inline math `$...$`. Runs after code and backslash-escape protection so `$`
-    /// inside code or an escaped `\$` is never treated as a delimiter. The opening
-    /// `$` must not be followed by whitespace, the closing `$` must not be preceded
-    /// by whitespace, and `$$` (display math) is excluded.
+    /// Inline math `$...$`. Runs after code protection (so `$` inside code is never
+    /// a delimiter) but before backslash-escape protection, so TeX commands made of
+    /// backslash + punctuation (`\,`, `\%`, `\{`, …) reach the math engine verbatim.
+    /// The pattern itself guards against escapes: an escaped `\$` never opens math,
+    /// and inside the span every backslash is consumed together with its following
+    /// character, so an interior `\$` cannot close the span. The opening `$` must
+    /// not be followed by whitespace, the closing `$` must not be preceded by
+    /// whitespace, and `$$` (display math) is excluded.
     private func protectInlineMath(_ text: String, protector: InlineProtector) -> String {
-        replaceMatches(in: text, pattern: #"(?<!\$)\$(?![\s$])((?:[^$])+?)(?<!\s)\$(?!\$)"#) { match, source in
+        replaceMatches(in: text, pattern: #"(?<![$\\])\$(?![\s$])((?:\\.|[^\\$])+?)(?<!\s)\$(?!\$)"#) { match, source in
             guard let range = Range(match.range(at: 1), in: source) else {
                 return matchText(match, in: source)
             }
@@ -1535,9 +1540,12 @@ private final class InlineProtector {
     }
 
     /// Replaces every protection token in `text` with its original fragment.
+    /// Restores in descending index order: a fragment can only embed tokens
+    /// created before it (lower index), so inserting outer fragments first lets
+    /// later iterations resolve the tokens nested inside them.
     func restore(in text: String) -> String {
         var result = text
-        for (index, fragment) in fragments.enumerated() {
+        for (index, fragment) in fragments.enumerated().reversed() {
             result = result.replacingOccurrences(of: "\u{E000}MD2-\(index)\u{E000}", with: fragment)
         }
         return result

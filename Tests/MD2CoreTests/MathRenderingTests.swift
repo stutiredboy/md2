@@ -116,6 +116,49 @@ struct MathRenderingTests {
         #expect(document.html.contains("$$x^2$$"))
     }
 
+    // MARK: Backslash TeX commands inside inline math (4.5)
+
+    @Test func backslashTeXCommandsSurviveInsideInlineMath() {
+        let document = MarkdownRenderer().render(#"单位年持有成本 $h = I \cdot C_\text{eff} = 0.25\,C_\text{eff}$ 计算如下。"#)
+
+        // `\,` (thin space) reaches KaTeX verbatim instead of being eaten as a
+        // Markdown backslash escape.
+        #expect(document.html.contains(#"<span class="math math-inline">h = I \cdot C_\text{eff} = 0.25\,C_\text{eff}</span>"#))
+        // The internal protection placeholder never leaks into the DOM.
+        #expect(!document.html.contains("MD2-"))
+    }
+
+    @Test func escapedPercentSurvivesInsideInlineMath() {
+        let document = MarkdownRenderer().render(#"服务水平 $z_{98\%}=2.05$ 对应的安全系数。"#)
+
+        #expect(document.html.contains(#"<span class="math math-inline">z_{98\%}=2.05</span>"#))
+        #expect(!document.html.contains("MD2-"))
+    }
+
+    @Test func escapedDollarInsideInlineMathDoesNotCloseSpan() {
+        let document = MarkdownRenderer().render(#"库存占用资金 $\text{Inv\$} = AIL \cdot C_\text{eff}$ 如下。"#)
+
+        // The interior `\$` is TeX source, not a closing delimiter: one span
+        // spanning to the final unescaped `$`.
+        #expect(document.html.contains(#"<span class="math math-inline">\text{Inv\$} = AIL \cdot C_\text{eff}</span>"#))
+        #expect(!document.html.contains("MD2-"))
+    }
+
+    @Test func escapedDollarsDoNotPairIntoMath() {
+        let document = MarkdownRenderer().render(#"循环库存 \$18 125 与安全库存 \$10 633"#)
+
+        #expect(!document.html.contains("class=\"math"))
+        #expect(document.html.contains("$18 125"))
+        #expect(document.html.contains("$10 633"))
+    }
+
+    @Test func escapedDollarCoexistsWithRealMathOnOneLine() {
+        let document = MarkdownRenderer().render(#"成本为 \$5，公式为 $x+1$"#)
+
+        #expect(document.html.contains("$5"))
+        #expect(document.html.contains(#"<span class="math math-inline">x+1</span>"#))
+    }
+
     // MARK: Offline assets (5.x support)
 
     @Test func previewHTMLBundlesKaTeXAssetsForOfflineRendering() {
