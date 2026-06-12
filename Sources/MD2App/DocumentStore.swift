@@ -23,6 +23,12 @@ final class DocumentStore: ObservableObject {
     @Published var jumpLine: Int?
     @Published var jumpHeadingID: String?
     @Published var jumpFraction: Double?
+    /// Mode-switch viewport anchors, one per destination surface so the
+    /// outgoing view can never consume the incoming view's target during the
+    /// transition. They take precedence over the single-target jump bindings
+    /// above and are consumed once applied.
+    @Published var editorJumpAnchor: ViewportAnchor?
+    @Published var previewJumpAnchor: ViewportAnchor?
     @Published private(set) var documentIdentity = UUID()
     /// Set by Find menu commands; observed by `ContentView`, which dispatches the
     /// action to whichever surface (editor or preview) is currently active.
@@ -84,6 +90,8 @@ final class DocumentStore: ObservableObject {
     }
 
     func jump(to heading: Heading) {
+        editorJumpAnchor = nil
+        previewJumpAnchor = nil
         jumpFraction = nil
         jumpLine = heading.line
         jumpHeadingID = heading.id

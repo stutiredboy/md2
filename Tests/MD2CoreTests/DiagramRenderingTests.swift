@@ -11,13 +11,13 @@ struct DiagramRenderingTests {
         ```
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
         // The placeholder starts in the source-hiding pending state and carries
         // the verbatim (HTML-escaped) source for the engine to read.
-        #expect(document.html.contains(#"<div class="diagram diagram-mermaid diagram-pending">graph TD; A--&gt;B;</div>"#))
+        #expect(html.contains(#"<div class="diagram diagram-mermaid diagram-pending">graph TD; A--&gt;B;</div>"#))
         // The diagram source is not emitted as a code block.
-        #expect(!document.html.contains("language-mermaid"))
+        #expect(!html.contains("language-mermaid"))
     }
 
     @Test func diagramPlaceholderStartsPendingWithVerbatimSource() {
@@ -29,15 +29,15 @@ struct DiagramRenderingTests {
         ]
 
         for (info, cssClass) in cases {
-            let document = MarkdownRenderer().render("""
+            let html = MarkdownRenderer().render("""
             ```\(info)
             graph TD; A-->B;
             ```
-            """)
+            """).html.withoutSourceLineMetadata
 
-            #expect(document.html.contains(#"<div class="diagram \#(cssClass) diagram-pending">"#))
+            #expect(html.contains(#"<div class="diagram \#(cssClass) diagram-pending">"#))
             // The verbatim source survives so the engine can render it.
-            #expect(document.html.contains("graph TD; A--&gt;B;"))
+            #expect(html.contains("graph TD; A--&gt;B;"))
         }
     }
 
@@ -50,11 +50,11 @@ struct DiagramRenderingTests {
         ```
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains(#"<div class="diagram diagram-flow diagram-pending">"#))
-        #expect(document.html.contains("st=&gt;start: Start"))
-        #expect(document.html.contains("st-&gt;e"))
+        #expect(html.contains(#"<div class="diagram diagram-flow diagram-pending">"#))
+        #expect(html.contains("st=&gt;start: Start"))
+        #expect(html.contains("st-&gt;e"))
     }
 
     @Test func rendersSequencePlaceholder() {
@@ -65,11 +65,11 @@ struct DiagramRenderingTests {
         ```
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains(#"<div class="diagram diagram-sequence diagram-pending">"#))
-        #expect(document.html.contains("Alice-&gt;Bob: Hi"))
-        #expect(document.html.contains("Bob--&gt;Alice: Hello"))
+        #expect(html.contains(#"<div class="diagram diagram-sequence diagram-pending">"#))
+        #expect(html.contains("Alice-&gt;Bob: Hi"))
+        #expect(html.contains("Bob--&gt;Alice: Hello"))
     }
 
     @Test func diagramInfoStringIsCaseInsensitive() {
@@ -92,11 +92,11 @@ struct DiagramRenderingTests {
         ```
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
         // The verbatim, HTML-escaped source proves no inline Markdown ran: the
         // underscores/asterisks survive instead of becoming <em>/<strong>.
-        #expect(document.html.contains(#"<div class="diagram diagram-mermaid diagram-pending">graph LR; _a_--&gt;*b*;</div>"#))
+        #expect(html.contains(#"<div class="diagram diagram-mermaid diagram-pending">graph LR; _a_--&gt;*b*;</div>"#))
     }
 
     // MARK: Non-diagram fences stay code (3.3 / spec: no interference)
@@ -121,10 +121,10 @@ struct DiagramRenderingTests {
         ```
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains("<pre><code"))
-        #expect(!document.html.contains("class=\"diagram"))
+        #expect(html.contains("<pre><code"))
+        #expect(!html.contains("class=\"diagram"))
     }
 
     @Test func unlabeledFenceStaysCodeBlock() {
@@ -134,10 +134,10 @@ struct DiagramRenderingTests {
         ```
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains("<pre><code>plain fenced content</code></pre>"))
-        #expect(!document.html.contains("class=\"diagram"))
+        #expect(html.contains("<pre><code>plain fenced content</code></pre>"))
+        #expect(!html.contains("class=\"diagram"))
     }
 
     // MARK: Offline assets / bootstrap presence

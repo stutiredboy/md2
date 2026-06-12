@@ -20,19 +20,19 @@ struct MarkdownRendererTests {
         ```
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains(#"<h1 id="title">Title</h1>"#))
-        #expect(document.html.contains("<strong>bold</strong>"))
-        #expect(document.html.contains("<em>soft</em>"))
-        #expect(document.html.contains(#"<a href="https://example.com">link</a>"#))
-        #expect(document.html.contains(#"<ul class="task-list">"#))
-        #expect(document.html.contains(#"<input type="checkbox" disabled checked>"#))
-        #expect(document.html.contains("<table>"))
-        #expect(document.html.contains("<code>1</code>"))
-        #expect(document.html.contains(#"<code class="language-swift">"#))
-        #expect(document.html.contains(#"<span class="tok-keyword">let</span> value ="#))
-        #expect(document.html.contains(#"<span class="tok-string">&quot;&lt;safe&gt;&quot;</span>"#))
+        #expect(html.contains(#"<h1 id="title">Title</h1>"#))
+        #expect(html.contains("<strong>bold</strong>"))
+        #expect(html.contains("<em>soft</em>"))
+        #expect(html.contains(#"<a href="https://example.com">link</a>"#))
+        #expect(html.contains(#"<ul class="task-list">"#))
+        #expect(html.contains(#"<input type="checkbox" disabled checked>"#))
+        #expect(html.contains("<table>"))
+        #expect(html.contains("<code>1</code>"))
+        #expect(html.contains(#"<code class="language-swift">"#))
+        #expect(html.contains(#"<span class="tok-keyword">let</span> value ="#))
+        #expect(html.contains(#"<span class="tok-string">&quot;&lt;safe&gt;&quot;</span>"#))
     }
 
     @Test func rendersTableOfContentsFromHeadings() {
@@ -43,11 +43,11 @@ struct MarkdownRendererTests {
         ## Part
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains(#"<nav class="toc">"#))
-        #expect(document.html.contains(##"<a class="toc-level-1" href="#title">Title</a>"##))
-        #expect(document.html.contains(##"<a class="toc-level-2" href="#part">Part</a>"##))
+        #expect(html.contains(#"<nav class="toc">"#))
+        #expect(html.contains(##"<a class="toc-level-1" href="#title">Title</a>"##))
+        #expect(html.contains(##"<a class="toc-level-2" href="#part">Part</a>"##))
     }
 
     @Test func escapesHTMLInParagraphs() {
@@ -139,11 +139,11 @@ struct MarkdownRendererTests {
             - [x] done
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains(#"<ul class="task-list">\#n<li><input type="checkbox" disabled checked> done</li>"#))
+        #expect(html.contains(#"<ul class="task-list">\#n<li><input type="checkbox" disabled checked> done</li>"#))
         // The outer list has no task item, so it is not a task-list.
-        #expect(document.html.contains("<ul>\n<li>parent"))
+        #expect(html.contains("<ul>\n<li>parent"))
     }
 
     @Test func nestsOrderedListUnderUnorderedItem() {
@@ -179,10 +179,10 @@ struct MarkdownRendererTests {
         line three
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains("<p>line one<br>line two<br>line three</p>"))
-        #expect(!document.html.contains("line one line two"))
+        #expect(html.contains("<p>line one<br>line two<br>line three</p>"))
+        #expect(!html.contains("line one line two"))
     }
 
     @Test func multiLineBlockquotePreservesLineBreaks() {
@@ -205,11 +205,11 @@ struct MarkdownRendererTests {
         para two
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains("<p>para one</p>"))
-        #expect(document.html.contains("<p>para two</p>"))
-        #expect(!document.html.contains("para one<br>"))
+        #expect(html.contains("<p>para one</p>"))
+        #expect(html.contains("<p>para two</p>"))
+        #expect(!html.contains("para one<br>"))
     }
 
     @Test func backslashHardBreakRemovesMarkerAndEmitsBr() {

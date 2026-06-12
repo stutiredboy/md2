@@ -3,6 +3,8 @@ import Foundation
 /// A cross-mode scroll target, captured from the view the user is leaving and
 /// applied to the view they are entering when toggling Write↔Read.
 ///
+/// - ``viewport(_:)`` targets the block/source-line context the user was
+///   viewing, with heading and fraction fallbacks carried inside the anchor.
 /// - ``heading(id:)`` targets the preview by HTML element id.
 /// - ``fraction(_:)`` targets either view proportionally (0...1) when no
 ///   section heading is available to anchor on.
@@ -10,6 +12,7 @@ import Foundation
 /// The editor is targeted directly by 1-based source line through a separate
 /// `jumpLine` binding rather than through this enum.
 public enum ModeSwitchAnchor: Equatable, Sendable {
+    case viewport(ViewportAnchor)
     case heading(id: String)
     case fraction(Double)
 }

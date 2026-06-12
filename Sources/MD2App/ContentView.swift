@@ -7,13 +7,19 @@ struct ContentView: View {
     @ObservedObject var settings: AppSettings
     @State private var mode: EditorMode
     @State private var showsOutline: Bool
-    /// Latest top-visible source line reported by the editor, used to anchor a
-    /// switch into preview mode.
+    /// Latest top-visible source line reported by the editor — the cached
+    /// fallback when a live capture is unavailable at switch time.
     @State private var editorAnchorLine = 1
-    /// Latest heading id at the top of the preview viewport (and its scroll
-    /// fraction fallback), used to anchor a switch into edit mode.
-    @State private var previewAnchorID: String?
-    @State private var previewAnchorFraction = 0.0
+    /// Latest debounced viewport anchor reported by the preview — the cached
+    /// fallback when the live capture does not answer in time.
+    @State private var previewAnchor: ViewportAnchor?
+    /// On-demand readers for the *live* outgoing surface, so a switch right
+    /// after a scroll uses the current viewport rather than a stale callback.
+    @State private var editorViewport = EditorViewportReader()
+    @State private var previewViewport = PreviewViewportReader()
+    /// True while a Read→Write switch waits for the preview's async anchor
+    /// capture, so repeated requests cannot race each other.
+    @State private var isCapturingPreviewAnchor = false
     /// Edit-mode find/replace bar state (write mode).
     @State private var editorFindVisible = false
     @State private var editorFindShowsReplace = false
@@ -211,42 +217,80 @@ struct ContentView: View {
         return String(format: settings.text(.matchStatus), index, total)
     }
 
-    /// Switches mode, first resolving the outgoing view's anchor to a target on
-    /// the incoming view. The anchor is set on `document` *before* `mode` flips,
-    /// so the freshly-created destination view already knows where to land when
-    /// it loads — critical for the preview, whose page load can be slow when
+    /// Switches mode, first resolving the outgoing view's viewport anchor to a
+    /// target on the incoming view. The anchor is captured fresh from the live
+    /// outgoing surface at request time (the cached scroll callback is only the
+    /// fallback), and is set on `document` *before* `mode` flips, so the
+    /// freshly-created destination view already knows where to land when it
+    /// loads — critical for the preview, whose page load can be slow when
     /// heavy diagram/math engines are inlined.
     private func requestMode(_ newMode: EditorMode) {
         guard newMode != mode else { return }
-        let outline = document.rendered.outline
 
         switch newMode {
         case .read:
-            // Write → Read: anchor the preview on the section the editor was in.
-            let heading = outline.heading(atOrAbove: editorAnchorLine)
-            if let heading {
-                document.jumpFraction = nil
-                document.jumpHeadingID = heading.id
-            } else {
-                document.jumpHeadingID = nil
-                document.jumpFraction = fraction(
-                    forLine: editorAnchorLine,
-                    totalLines: totalLineCount
-                )
-            }
+            // Write → Read: the editor's anchor is readable synchronously.
+            deliver(anchor: editorAnchorForPreview(), switchingTo: .read)
         case .write:
-            // Read → Write: anchor the editor on the section the preview showed.
-            let heading = previewAnchorID.flatMap(outline.heading(forID:))
-            if let heading {
-                document.jumpFraction = nil
-                document.jumpLine = heading.line
-            } else {
-                document.jumpLine = nil
-                document.jumpFraction = previewAnchorFraction
+            // Read → Write: ask the live page first; its capture answers fast
+            // or times out to the cached debounced anchor.
+            guard !isCapturingPreviewAnchor else { return }
+            isCapturingPreviewAnchor = true
+            previewViewport.currentAnchor { fresh in
+                isCapturingPreviewAnchor = false
+                guard mode == .read else { return }
+                deliver(anchor: previewAnchorForEditor(fresh: fresh), switchingTo: .write)
             }
         }
+    }
 
+    /// Publishes the anchor for the incoming view and flips the mode. The
+    /// single-target jump bindings are cleared so a leftover outline/find jump
+    /// can never override the fresher viewport anchor. Each direction has its
+    /// own anchor binding: the outgoing surface's final `updateNSView` pass
+    /// must not be able to consume the incoming surface's target.
+    private func deliver(anchor: ViewportAnchor, switchingTo newMode: EditorMode) {
+        document.jumpLine = nil
+        document.jumpHeadingID = nil
+        document.jumpFraction = nil
+        switch newMode {
+        case .read:
+            document.editorJumpAnchor = nil
+            document.previewJumpAnchor = anchor
+        case .write:
+            document.previewJumpAnchor = nil
+            document.editorJumpAnchor = anchor
+        }
         mode = newMode
+    }
+
+    /// The editor's live viewport anchor (falling back to the last reported
+    /// line), completed with the heading/fraction fallbacks the preview needs
+    /// when block metadata cannot resolve.
+    private func editorAnchorForPreview() -> ViewportAnchor {
+        var anchor = editorViewport.currentAnchor() ?? ViewportAnchor(
+            sourceLine: editorAnchorLine,
+            scrollFraction: fraction(forLine: editorAnchorLine, totalLines: totalLineCount)
+        )
+        if let line = anchor.sourceLine {
+            anchor.fallbackHeadingID = document.rendered.outline.heading(atOrAbove: line)?.id
+        }
+        return anchor
+    }
+
+    /// The preview anchor to apply to the editor: the fresh capture when it
+    /// answered, else the cached debounced anchor. A heading-only anchor is
+    /// resolved to its source line here, where the outline is known.
+    private func previewAnchorForEditor(fresh: ViewportAnchor?) -> ViewportAnchor {
+        var anchor = fresh ?? previewAnchor ?? ViewportAnchor()
+        if anchor.sourceLine == nil,
+           let headingID = anchor.fallbackHeadingID,
+           let heading = document.rendered.outline.heading(forID: headingID) {
+            anchor.sourceLine = heading.line
+            anchor.sourceEndLine = nil
+            anchor.intraBlockProgress = 0
+        }
+        return anchor
     }
 
     private var totalLineCount: Int {
@@ -264,6 +308,8 @@ struct ContentView: View {
                     text: $document.text,
                     jumpLine: $document.jumpLine,
                     jumpFraction: $document.jumpFraction,
+                    jumpAnchor: $document.editorJumpAnchor,
+                    viewportReader: editorViewport,
                     onAnchorLineChange: { editorAnchorLine = $0 },
                     onEnterPreview: { requestMode(.read) },
                     findQuery: $editorFindQuery,
@@ -301,10 +347,9 @@ struct ContentView: View {
                     baseURL: document.baseURL,
                     jumpHeadingID: $document.jumpHeadingID,
                     jumpFraction: $document.jumpFraction,
-                    onAnchorChange: { id, fraction in
-                        previewAnchorID = id
-                        previewAnchorFraction = fraction
-                    },
+                    jumpAnchor: $document.previewJumpAnchor,
+                    viewportReader: previewViewport,
+                    onAnchorChange: { previewAnchor = $0 },
                     onEnterEdit: { requestMode(.write) },
                     findQuery: $previewFindQuery,
                     findNavigation: $previewFindNavigation,

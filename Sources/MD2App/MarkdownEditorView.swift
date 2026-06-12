@@ -2,11 +2,30 @@ import AppKit
 import MD2Core
 import SwiftUI
 
+/// Hands the surrounding view a way to read the editor's *live* viewport
+/// anchor at the instant a mode switch is requested, instead of relying on
+/// the last (possibly stale) debounced scroll callback.
+@MainActor
+final class EditorViewportReader {
+    fileprivate var capture: (() -> ViewportAnchor?)?
+
+    /// The current top-of-viewport anchor from the live text view, or `nil`
+    /// when the editor is not mounted or has no measurable geometry yet.
+    func currentAnchor() -> ViewportAnchor? {
+        capture?()
+    }
+}
+
 struct MarkdownEditorView: NSViewRepresentable {
     @Binding var text: String
     @Binding var jumpLine: Int?
     /// Fraction (0...1) to scroll to on mount when no line anchor applies.
     @Binding var jumpFraction: Double?
+    /// Mode-switch viewport anchor to apply on mount; takes precedence over
+    /// `jumpLine`/`jumpFraction` and is consumed once applied.
+    @Binding var jumpAnchor: ViewportAnchor?
+    /// Exposes on-demand capture of the live viewport anchor for mode switches.
+    var viewportReader: EditorViewportReader?
     /// Reports the source line at the top of the visible rect whenever the user
     /// scrolls, so the surrounding view can anchor a mode switch to it.
     var onAnchorLineChange: (Int) -> Void = { _ in }
@@ -82,6 +101,11 @@ struct MarkdownEditorView: NSViewRepresentable {
         clipView.postsBoundsChangedNotifications = true
         context.coordinator.observe(scrollView: scrollView)
 
+        viewportReader?.capture = { [weak scrollView] in
+            guard let scrollView else { return nil }
+            return Coordinator.viewportAnchor(in: scrollView)
+        }
+
         DispatchQueue.main.async {
             textView.window?.makeFirstResponder(textView)
         }
@@ -94,6 +118,10 @@ struct MarkdownEditorView: NSViewRepresentable {
         context.coordinator.onAnchorLineChange = onAnchorLineChange
         context.coordinator.onFindShortcut = onFindShortcut
         context.coordinator.onFindResult = onFindResult
+        viewportReader?.capture = { [weak scrollView] in
+            guard let scrollView else { return nil }
+            return Coordinator.viewportAnchor(in: scrollView)
+        }
         guard let textView = scrollView.documentView as? NSTextView else { return }
         if let sourceTextView = textView as? MarkdownSourceTextView {
             sourceTextView.onFindAction = { action in
@@ -131,15 +159,30 @@ struct MarkdownEditorView: NSViewRepresentable {
             }
         }
 
-        if let jumpLine {
-            let targetLine = jumpLine
+        if let anchor = jumpAnchor {
+            context.coordinator.applyAnchorUntilSettled(anchor, in: scrollView) { anchor, scrollView in
+                apply(anchor: anchor, in: scrollView, textView: textView)
+            }
             DispatchQueue.main.async {
-                if scroll(to: targetLine, in: textView) {
+                self.jumpAnchor = nil
+                self.jumpLine = nil
+                self.jumpFraction = nil
+            }
+        } else if let jumpLine {
+            let targetLine = jumpLine
+            let coordinator = context.coordinator
+            DispatchQueue.main.async {
+                let applied = coordinator.performProgrammaticScroll(in: scrollView) {
+                    scroll(to: targetLine, in: textView)
+                }
+                if applied {
                     self.jumpLine = nil
                     self.jumpFraction = nil
                 } else {
                     DispatchQueue.main.async {
-                        _ = scroll(to: targetLine, in: textView)
+                        _ = coordinator.performProgrammaticScroll(in: scrollView) {
+                            scroll(to: targetLine, in: textView)
+                        }
                         self.jumpLine = nil
                         self.jumpFraction = nil
                     }
@@ -147,17 +190,34 @@ struct MarkdownEditorView: NSViewRepresentable {
             }
         } else if let jumpFraction {
             let targetFraction = jumpFraction
+            let coordinator = context.coordinator
             DispatchQueue.main.async {
-                if scroll(toFraction: targetFraction, in: scrollView) {
+                let applied = coordinator.performProgrammaticScroll(in: scrollView) {
+                    scroll(toFraction: targetFraction, in: scrollView)
+                }
+                if applied {
                     self.jumpFraction = nil
                 } else {
                     DispatchQueue.main.async {
-                        _ = scroll(toFraction: targetFraction, in: scrollView)
+                        _ = coordinator.performProgrammaticScroll(in: scrollView) {
+                            scroll(toFraction: targetFraction, in: scrollView)
+                        }
                         self.jumpFraction = nil
                     }
                 }
             }
         }
+    }
+
+    /// Applies a mode-switch viewport anchor: a source-line anchor resolves to
+    /// its target line (block start advanced by intra-block progress) and is
+    /// placed near the top of the viewport; otherwise the proportional scroll
+    /// fraction is the fallback. Both paths force layout and clamp the offset.
+    private func apply(anchor: ViewportAnchor, in scrollView: NSScrollView, textView: NSTextView) -> Bool {
+        if let targetLine = anchor.targetSourceLine {
+            return scroll(to: targetLine, in: textView)
+        }
+        return scroll(toFraction: anchor.scrollFraction, in: scrollView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -276,6 +336,10 @@ struct MarkdownEditorView: NSViewRepresentable {
         var onFindResult: (_ total: Int, _ index: Int) -> Void = { _, _ in }
         var lastFocusToken: UUID?
         private weak var scrollView: NSScrollView?
+        /// True while a programmatic scroll (mode-switch jump, outline jump,
+        /// find reveal) is in flight, so its transient positions are never
+        /// reported back as the user's anchor.
+        private var isProgrammaticScroll = false
         private var lastFindQuery = ""
         private var lastIndexedText = ""
         private var matches: [NSRange] = []
@@ -406,7 +470,16 @@ struct MarkdownEditorView: NSViewRepresentable {
             guard currentMatchIndex >= 0, currentMatchIndex < matches.count else { return }
             let range = matches[currentMatchIndex]
             textView.setSelectedRange(range)
-            textView.scrollRangeToVisible(range)
+            // Find reveals are programmatic scrolls: suppress anchor reporting
+            // until they settle so they cannot become a stale mode-switch anchor.
+            if let scrollView = textView.enclosingScrollView {
+                _ = performProgrammaticScroll(in: scrollView) {
+                    textView.scrollRangeToVisible(range)
+                    return true
+                }
+            } else {
+                textView.scrollRangeToVisible(range)
+            }
         }
 
         private func wrappedIndex(_ index: Int, count: Int) -> Int {
@@ -434,9 +507,112 @@ struct MarkdownEditorView: NSViewRepresentable {
         }
 
         @MainActor @objc private func boundsDidChange() {
-            guard let scrollView,
+            guard !isProgrammaticScroll,
+                  let scrollView,
                   let line = Self.topVisibleLine(in: scrollView) else { return }
             onAnchorLineChange(line)
+        }
+
+        /// The mode-switch anchor currently being settled, used to dedupe
+        /// repeated `updateNSView` passes and cancel a superseded settle loop.
+        private var settlingAnchor: ViewportAnchor?
+
+        /// Applies a mode-switch anchor, then re-applies it across runloop
+        /// turns until the editor's measured content height stops changing.
+        /// A freshly mounted text view is laid out by SwiftUI *after* the
+        /// first apply, so a single pass can compute the target from garbage
+        /// geometry and leave the editor overscrolled with an empty visible
+        /// range; converging on stable geometry keeps the final offset
+        /// clamped against the real content height. Anchor reporting stays
+        /// suppressed throughout; the settled position is reported once.
+        @MainActor func applyAnchorUntilSettled(
+            _ anchor: ViewportAnchor,
+            in scrollView: NSScrollView,
+            apply: @escaping (ViewportAnchor, NSScrollView) -> Bool
+        ) {
+            guard settlingAnchor != anchor else { return }
+            settlingAnchor = anchor
+            isProgrammaticScroll = true
+            var attempts = 0
+            var lastContentHeight = CGFloat(-1)
+
+            func step() {
+                guard self.settlingAnchor == anchor else { return }
+                attempts += 1
+
+                // While the freshly mounted scroll view is being sized, a
+                // transient negative clip origin can get baked into the
+                // document view's frame origin, silently shifting all content
+                // out of the scrollable region. Re-base it before scrolling.
+                if let documentView = scrollView.documentView, documentView.frame.origin.y != 0 {
+                    documentView.setFrameOrigin(NSPoint(x: documentView.frame.origin.x, y: 0))
+                }
+
+                var appliedNow = false
+                if scrollView.contentView.bounds.height > 0 {
+                    appliedNow = apply(anchor, scrollView)
+                }
+                let contentHeight = scrollView.documentView
+                    .map { scrollableContentHeight(for: $0) } ?? 0
+                // Stable only when the scroll applied against unchanged
+                // geometry *and* the viewport actually shows content — an
+                // empty visible rect means the offset points into the void.
+                let showsContent = !(scrollView.documentView?.visibleRect.isEmpty ?? true)
+                let isStable = appliedNow && showsContent && abs(contentHeight - lastContentHeight) < 1
+                lastContentHeight = contentHeight
+
+                if (isStable && attempts >= 2) || attempts >= 12 {
+                    self.settlingAnchor = nil
+                    self.isProgrammaticScroll = false
+                    if let line = Self.topVisibleLine(in: scrollView) {
+                        self.onAnchorLineChange(line)
+                    }
+                } else {
+                    DispatchQueue.main.async(execute: step)
+                }
+            }
+            step()
+        }
+
+        /// Runs `body` (a programmatic scroll) with transient anchor reporting
+        /// suppressed, then — once the scroll has settled on the next runloop
+        /// turn — reports the final visible line as the new cached anchor.
+        @MainActor func performProgrammaticScroll(
+            in scrollView: NSScrollView,
+            _ body: () -> Bool
+        ) -> Bool {
+            isProgrammaticScroll = true
+            let applied = body()
+            DispatchQueue.main.async { [weak self, weak scrollView] in
+                guard let self else { return }
+                self.isProgrammaticScroll = false
+                guard let scrollView,
+                      let line = Self.topVisibleLine(in: scrollView) else { return }
+                self.onAnchorLineChange(line)
+            }
+            return applied
+        }
+
+        /// Reads the live viewport as a mode-switch anchor: the top visible
+        /// source line, the proportional scroll fraction, and the editor's
+        /// stable top content inset. Computed on demand so a switch right
+        /// after a scroll never sees a stale debounced value.
+        @MainActor static func viewportAnchor(in scrollView: NSScrollView) -> ViewportAnchor? {
+            guard let textView = scrollView.documentView as? NSTextView,
+                  let line = topVisibleLine(in: scrollView) else { return nil }
+
+            let visibleHeight = Double(scrollView.contentView.bounds.height)
+            let contentHeight = Double(scrollableContentHeight(for: textView))
+            let offset = Double(scrollView.contentView.bounds.origin.y)
+            let maxOffset = contentHeight - visibleHeight
+            let fraction = maxOffset > 0 ? offset / maxOffset : 0
+
+            return ViewportAnchor(
+                sourceLine: line,
+                intraBlockProgress: 0,
+                viewportTopInset: Double(textView.textContainerInset.height),
+                scrollFraction: fraction
+            )
         }
 
         /// Computes the 1-based source line at the top of the visible rect using

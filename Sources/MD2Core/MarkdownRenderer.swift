@@ -22,11 +22,28 @@ public struct MarkdownRenderer: Sendable {
         )
     }
 
-    private func renderBody(_ markdown: String, outline: [Heading], footnotes: FootnoteContext) -> String {
+    private func renderBody(
+        _ markdown: String,
+        outline: [Heading],
+        footnotes: FootnoteContext,
+        lineOffset: Int = 0
+    ) -> String {
         let lines = markdown.normalizedMarkdownLines
         let headingsByLine = Dictionary(uniqueKeysWithValues: outline.map { ($0.line, $0) })
         var blocks: [String] = []
         var index = 0
+
+        // Every top-level block records the 1-based source-line span that
+        // produced it (`data-md2-source-line` / `-end-line`), so the preview
+        // can map its viewport back to editor lines on a mode switch.
+        // `lineOffset` keeps spans absolute inside nested blockquote renders.
+        func appendBlock(_ html: String, from startIndex: Int, to nextIndex: Int) {
+            blocks.append(taggedWithSourceLines(
+                html,
+                startLine: lineOffset + startIndex + 1,
+                endLine: lineOffset + nextIndex
+            ))
+        }
 
         while index < lines.count {
             let line = lines[index]
@@ -39,65 +56,72 @@ public struct MarkdownRenderer: Sendable {
 
             if index == 0, trimmed == "---" {
                 if let frontMatter = frontMatterBlock(from: lines, startIndex: index) {
-                    blocks.append(frontMatter.html)
+                    appendBlock(frontMatter.html, from: index, to: frontMatter.nextIndex)
                     index = frontMatter.nextIndex
                     continue
                 }
             }
 
             if let fence = fencedCodeBlock(from: lines, startIndex: index) {
-                blocks.append(fence.html)
+                appendBlock(fence.html, from: index, to: fence.nextIndex)
                 index = fence.nextIndex
                 continue
             }
 
             if let indentedCode = indentedCodeBlock(from: lines, startIndex: index) {
-                blocks.append(indentedCode.html)
+                appendBlock(indentedCode.html, from: index, to: indentedCode.nextIndex)
                 index = indentedCode.nextIndex
                 continue
             }
 
             if let math = mathBlock(from: lines, startIndex: index) {
-                blocks.append(math.html)
+                appendBlock(math.html, from: index, to: math.nextIndex)
                 index = math.nextIndex
                 continue
             }
 
             if trimmed == "[TOC]" {
-                blocks.append(tableOfContents(outline))
+                appendBlock(tableOfContents(outline), from: index, to: index + 1)
                 index += 1
                 continue
             }
 
             if let table = tableBlock(from: lines, startIndex: index, footnotes: footnotes) {
-                blocks.append(table.html)
+                appendBlock(table.html, from: index, to: table.nextIndex)
                 index = table.nextIndex
                 continue
             }
 
             if let setextHeading = setextHeadingBlock(from: lines, startIndex: index, headingsByLine: headingsByLine) {
-                blocks.append(setextHeading.html)
+                appendBlock(setextHeading.html, from: index, to: setextHeading.nextIndex)
                 index = setextHeading.nextIndex
                 continue
             }
 
             if let heading = MarkdownLine.heading(in: line), let outlineHeading = headingsByLine[index + 1] {
-                blocks.append(
-                    "<h\(heading.level) id=\"\(escapeAttribute(outlineHeading.id))\">\(inlineHTML(heading.title))</h\(heading.level)>"
+                appendBlock(
+                    "<h\(heading.level) id=\"\(escapeAttribute(outlineHeading.id))\">\(inlineHTML(heading.title))</h\(heading.level)>",
+                    from: index,
+                    to: index + 1
                 )
                 index += 1
                 continue
             }
 
             if MarkdownLine.isHorizontalRule(line) {
-                blocks.append("<hr>")
+                appendBlock("<hr>", from: index, to: index + 1)
                 index += 1
                 continue
             }
 
             if trimmed.hasPrefix(">") {
-                let blockquote = blockquoteBlock(from: lines, startIndex: index, footnotes: footnotes)
-                blocks.append(blockquote.html)
+                let blockquote = blockquoteBlock(
+                    from: lines,
+                    startIndex: index,
+                    footnotes: footnotes,
+                    lineOffset: lineOffset
+                )
+                appendBlock(blockquote.html, from: index, to: blockquote.nextIndex)
                 index = blockquote.nextIndex
                 continue
             }
@@ -110,17 +134,34 @@ public struct MarkdownRenderer: Sendable {
             }
 
             if let list = listBlock(from: lines, startIndex: index, footnotes: footnotes) {
-                blocks.append(list.html)
+                appendBlock(list.html, from: index, to: list.nextIndex)
                 index = list.nextIndex
                 continue
             }
 
             let paragraph = paragraphBlock(from: lines, startIndex: index, footnotes: footnotes)
-            blocks.append(paragraph.html)
+            appendBlock(paragraph.html, from: index, to: paragraph.nextIndex)
             index = paragraph.nextIndex
         }
 
         return blocks.joined(separator: "\n")
+    }
+
+    /// Inserts the source-line span attributes into a block's first opening
+    /// tag. All block HTML starts with its element tag and every attribute
+    /// value is HTML-escaped, so the first `>` always terminates that tag.
+    /// The end-line attribute is emitted only for multi-line spans.
+    private func taggedWithSourceLines(_ html: String, startLine: Int, endLine: Int) -> String {
+        guard let tagEnd = html.firstIndex(of: ">") else { return html }
+
+        var attributes = " data-md2-source-line=\"\(startLine)\""
+        if endLine > startLine {
+            attributes += " data-md2-source-end-line=\"\(endLine)\""
+        }
+
+        var tagged = html
+        tagged.insert(contentsOf: attributes, at: tagEnd)
+        return tagged
     }
 
     private func frontMatterBlock(from lines: [String], startIndex: Int) -> (html: String, nextIndex: Int)? {
@@ -341,7 +382,12 @@ public struct MarkdownRenderer: Sendable {
         )
     }
 
-    private func blockquoteBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext) -> (html: String, nextIndex: Int) {
+    private func blockquoteBlock(
+        from lines: [String],
+        startIndex: Int,
+        footnotes: FootnoteContext,
+        lineOffset: Int = 0
+    ) -> (html: String, nextIndex: Int) {
         var quoteLines: [String] = []
         var index = startIndex
 
@@ -354,8 +400,16 @@ public struct MarkdownRenderer: Sendable {
             index += 1
         }
 
+        // Quote content lines map 1:1 to the consumed source lines, so the
+        // nested render keeps absolute source-line spans by offsetting to the
+        // quote's first line.
         let nestedMarkdown = quoteLines.joined(separator: "\n")
-        let quote = renderBody(nestedMarkdown, outline: outlineBuilder.build(from: nestedMarkdown), footnotes: footnotes)
+        let quote = renderBody(
+            nestedMarkdown,
+            outline: outlineBuilder.build(from: nestedMarkdown),
+            footnotes: footnotes,
+            lineOffset: lineOffset + startIndex
+        )
 
         return ("<blockquote>\n\(quote)\n</blockquote>", index)
     }
@@ -516,7 +570,7 @@ public struct MarkdownRenderer: Sendable {
                 continue
             }
             if let definition = parseFootnoteDefinition(from: lines, startIndex: index) {
-                context.define(label: definition.label, content: definition.content)
+                context.define(label: definition.label, content: definition.content, line: index + 1)
                 index = definition.nextIndex
                 continue
             }
@@ -607,7 +661,11 @@ public struct MarkdownRenderer: Sendable {
                 return "<a class=\"footnote-backref\" href=\"#\(anchor)\" aria-label=\"Back to reference\">↩</a>"
             }.joined(separator: " ")
 
-            return "<li id=\"fn-\(base)\">\(rendered) \(backrefs)</li>"
+            // Footnote items map back to the definition's source line so the
+            // footnotes section can anchor a mode switch like any other block.
+            let sourceLine = context.definitionLine(for: label)
+                .map { " data-md2-source-line=\"\($0)\"" } ?? ""
+            return "<li id=\"fn-\(base)\"\(sourceLine)>\(rendered) \(backrefs)</li>"
         }.joined(separator: "\n")
 
         return """
@@ -1597,6 +1655,8 @@ private extension Array {
 private final class FootnoteContext {
     /// label -> raw content lines, populated by the definition pre-scan.
     private var definitions: [String: [String]] = [:]
+    /// label -> 1-based source line of the definition, for preview anchoring.
+    private var definitionLines: [String: Int] = [:]
     /// Referenced labels in first-reference order; the index + 1 is the number.
     private var order: [String] = []
     /// label -> number of references seen so far (drives back-reference anchors).
@@ -1609,15 +1669,20 @@ private final class FootnoteContext {
     var hasReferences: Bool { !order.isEmpty }
     var referencedLabels: [String] { order }
 
-    func define(label: String, content: [String]) {
+    func define(label: String, content: [String], line: Int? = nil) {
         // First definition wins, mirroring common Markdown footnote behavior.
         if definitions[label] == nil {
             definitions[label] = content
+            definitionLines[label] = line
         }
     }
 
     func content(for label: String) -> [String]? {
         definitions[label]
+    }
+
+    func definitionLine(for label: String) -> Int? {
+        definitionLines[label]
     }
 
     func referenceCount(for label: String) -> Int {

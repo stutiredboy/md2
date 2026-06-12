@@ -10,7 +10,7 @@ struct FootnoteRenderingTests {
 
         [^1]: The supporting detail.
         """
-        let html = MarkdownRenderer().render(markdown).html
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
         // Reference becomes a numbered superscript link to the definition.
         #expect(html.contains(##"<sup class="footnote-ref"><a id="fnref-1" href="#fn-1">1</a></sup>"##))
@@ -33,7 +33,7 @@ struct FootnoteRenderingTests {
         [^alpha]: Alpha content.
         [^note]: Note content.
         """
-        let html = MarkdownRenderer().render(markdown).html
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
         // `note` is referenced first, so it is footnote 1 despite alphabetical order.
         #expect(html.contains(##"<a id="fnref-note" href="#fn-note">1</a>"##))
@@ -96,7 +96,7 @@ struct FootnoteRenderingTests {
 
         [^1]: Shared.
         """
-        let html = MarkdownRenderer().render(markdown).html
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
         // Both references render as footnote 1 with distinct back-reference anchors.
         #expect(html.contains(##"<a id="fnref-1" href="#fn-1">1</a>"##))
@@ -127,7 +127,7 @@ struct FootnoteRenderingTests {
         [^a+b]: Plus label.
         [^a/b]: Slash label.
         """
-        let html = MarkdownRenderer().render(markdown).html
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
         #expect(html.contains(##"<a id="fnref-a-b" href="#fn-a-b">1</a>"##))
         #expect(html.contains(##"<a id="fnref-a-b-2" href="#fn-a-b-2">2</a>"##))

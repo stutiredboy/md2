@@ -9,16 +9,17 @@ struct MarkdownSyntaxCoverageTests {
 
         let markdown = try String(contentsOf: url, encoding: .utf8)
         let document = MarkdownRenderer().render(markdown)
+        let html = document.html.withoutSourceLineMetadata
 
         #expect(document.outline.count >= 10)
-        #expect(document.html.contains("<blockquote>"))
-        #expect(document.html.contains("<hr>"))
-        #expect(document.html.components(separatedBy: "<table>").count - 1 >= 3)
-        #expect(document.html.contains("<th style=\"text-align:left\">维度</th>"))
-        #expect(document.html.contains("<strong>专业学位（工商管理硕士 / MBA）</strong>"))
-        #expect(document.html.contains("<code>[J]</code>"))
-        #expect(document.html.contains("<br>"))
-        #expect(!document.html.contains("| 维度 |"))
+        #expect(html.contains("<blockquote>"))
+        #expect(html.contains("<hr>"))
+        #expect(html.components(separatedBy: "<table>").count - 1 >= 3)
+        #expect(html.contains("<th style=\"text-align:left\">维度</th>"))
+        #expect(html.contains("<strong>专业学位（工商管理硕士 / MBA）</strong>"))
+        #expect(html.contains("<code>[J]</code>"))
+        #expect(html.contains("<br>"))
+        #expect(!html.contains("| 维度 |"))
     }
 
     @Test func rendersBlockSyntaxMatrix() {
@@ -52,7 +53,7 @@ struct MarkdownSyntaxCoverageTests {
         - [ ] next
         """
 
-        let html = MarkdownRenderer().render(markdown).html
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
         #expect(html.contains(#"<h1 id="atx-title">ATX Title</h1>"#))
         #expect(html.contains(#"<h2 id="setext-subtitle">Setext Subtitle</h2>"#))

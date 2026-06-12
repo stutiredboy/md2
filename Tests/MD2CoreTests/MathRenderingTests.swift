@@ -32,9 +32,9 @@ struct MathRenderingTests {
     // MARK: Block math (4.2)
 
     @Test func rendersSingleLineDisplayMath() {
-        let document = MarkdownRenderer().render("$$a^2 + b^2 = c^2$$")
+        let html = MarkdownRenderer().render("$$a^2 + b^2 = c^2$$").html.withoutSourceLineMetadata
 
-        #expect(document.html.contains(#"<div class="math math-display">a^2 + b^2 = c^2</div>"#))
+        #expect(html.contains(#"<div class="math math-display">a^2 + b^2 = c^2</div>"#))
     }
 
     @Test func rendersMultiLineDisplayMath() {
@@ -44,11 +44,11 @@ struct MathRenderingTests {
         $$
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains(#"<div class="math math-display">\int_0^1 x^2 \, dx</div>"#))
+        #expect(html.contains(#"<div class="math math-display">\int_0^1 x^2 \, dx</div>"#))
         // The `$$` delimiters are not shown as literal text.
-        #expect(!document.html.contains("<p>$$"))
+        #expect(!html.contains("<p>$$"))
     }
 
     @Test func displayMathSeparatesFromSurroundingParagraphs() {
@@ -58,11 +58,11 @@ struct MathRenderingTests {
         After the equation.
         """
 
-        let document = MarkdownRenderer().render(markdown)
+        let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(document.html.contains("<p>Before the equation.</p>"))
-        #expect(document.html.contains(#"<div class="math math-display">x = 1</div>"#))
-        #expect(document.html.contains("<p>After the equation.</p>"))
+        #expect(html.contains("<p>Before the equation.</p>"))
+        #expect(html.contains(#"<div class="math math-display">x = 1</div>"#))
+        #expect(html.contains("<p>After the equation.</p>"))
     }
 
     // MARK: False positives (4.3)
