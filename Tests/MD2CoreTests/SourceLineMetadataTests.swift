@@ -132,6 +132,49 @@ struct SourceLineMetadataTests {
         #expect(html.contains(#"<h1 id="title-text" data-md2-source-line="1" data-md2-source-end-line="2">"#))
     }
 
+    @Test func taskCheckboxesAreEnabledAndCarryTheirItemSourceLines() {
+        let markdown = """
+        # Title
+
+        - [ ] first
+        - [x] second
+            - [ ] nested child
+        """
+
+        let html = MarkdownRenderer().render(markdown).html
+
+        #expect(html.contains(#"<input type="checkbox" data-md2-task-line="3"> first"#))
+        #expect(html.contains(#"<input type="checkbox" data-md2-task-line="4" checked> second"#))
+        #expect(html.contains(#"<input type="checkbox" data-md2-task-line="5"> nested child"#))
+        // Enabled so a preview click can toggle; only task items carry inputs.
+        #expect(!html.contains(#"<input type="checkbox" disabled"#))
+    }
+
+    @Test func blockquotedTaskItemsCarryAbsoluteTaskLines() {
+        let markdown = """
+        # Title
+
+        > intro line
+        > - [ ] quoted task
+        """
+
+        let html = MarkdownRenderer().render(markdown).html
+
+        #expect(html.contains(#"<input type="checkbox" data-md2-task-line="4"> quoted task"#))
+    }
+
+    @Test func nonTaskListItemsCarryNoTaskLineAttribute() {
+        let markdown = """
+        - plain item
+        1. ordered item
+        """
+
+        let html = MarkdownRenderer().render(markdown).html
+
+        #expect(!html.contains("data-md2-task-line"))
+        #expect(!html.contains("<input"))
+    }
+
     @Test func sourceLineAttributesDoNotLeakIntoVisibleText() {
         let html = MarkdownRenderer().render("Plain paragraph.").html
 

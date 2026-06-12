@@ -97,6 +97,85 @@ final class DocumentStore: ObservableObject {
         jumpHeadingID = heading.id
     }
 
+    /// Sets the task-list marker on the 1-based source `line` to `checked`,
+    /// in response to a checkbox click in the preview. The request is
+    /// validated before anything is written — the line must exist and must
+    /// be a task item — so a stale or malformed preview message can never
+    /// corrupt unrelated text. Applying an absolute state (instead of
+    /// flipping) keeps duplicate messages idempotent; re-render, dirty
+    /// marking, and autosave ride the normal `text` pipeline. Returns
+    /// whether the line was a valid task item (so a caller can skip
+    /// reload-related work for ignored requests).
+    @discardableResult
+    func toggleTask(atLine line: Int, to checked: Bool) -> Bool {
+        guard let lineRange = Self.rangeOfLine(line, in: text),
+              let updated = Self.settingTaskMarker(in: String(text[lineRange]), to: checked) else {
+            return false
+        }
+        text = text.replacingCharacters(in: lineRange, with: updated)
+        return true
+    }
+
+    /// Character range of the 1-based `line` (excluding its terminator),
+    /// counting `\n`, `\r\n`, and `\r` as terminators — the same numbering
+    /// `normalizedMarkdownLines` gives the renderer's source-line metadata.
+    private static func rangeOfLine(_ line: Int, in text: String) -> Range<String.Index>? {
+        guard line >= 1 else { return nil }
+
+        var lineNumber = 1
+        var lineStart = text.startIndex
+        var index = text.startIndex
+
+        while index < text.endIndex {
+            let character = text[index]
+            // "\r\n" is a single Character in Swift, so each terminator is
+            // one grapheme regardless of style.
+            if character == "\n" || character == "\r" || character == "\r\n" {
+                if lineNumber == line {
+                    return lineStart..<index
+                }
+                lineNumber += 1
+                index = text.index(after: index)
+                lineStart = index
+            } else {
+                index = text.index(after: index)
+            }
+        }
+
+        return lineNumber == line ? lineStart..<text.endIndex : nil
+    }
+
+    /// Rewrites the task marker of a single source line to `checked`,
+    /// returning `nil` when the line is not a task-list item. Mirrors the
+    /// renderer's task syntax: optional leading whitespace and blockquote
+    /// `>` prefixes, a `-`/`*`/`+` bullet, one space, then `[ ]`, `[x]`, or
+    /// `[X]` followed by a space. Only the mark character changes.
+    private static func settingTaskMarker(in line: String, to checked: Bool) -> String? {
+        var index = line.startIndex
+
+        // Skip indentation and blockquote prefixes (e.g. "  > > - [ ] x").
+        while index < line.endIndex, line[index] == " " || line[index] == "\t" || line[index] == ">" {
+            index = line.index(after: index)
+        }
+
+        guard index < line.endIndex, "-*+".contains(line[index]) else { return nil }
+        index = line.index(after: index)
+        guard index < line.endIndex, line[index] == " " else { return nil }
+        index = line.index(after: index)
+
+        guard index < line.endIndex, line[index] == "[" else { return nil }
+        let markIndex = line.index(after: index)
+        guard markIndex < line.endIndex, " xX".contains(line[markIndex]) else { return nil }
+        let closeIndex = line.index(after: markIndex)
+        guard closeIndex < line.endIndex, line[closeIndex] == "]" else { return nil }
+        let spaceIndex = line.index(after: closeIndex)
+        guard spaceIndex < line.endIndex, line[spaceIndex] == " " else { return nil }
+
+        var updated = line
+        updated.replaceSubrange(markIndex...markIndex, with: checked ? "x" : " ")
+        return updated
+    }
+
     func open(_ url: URL) {
         load(from: url)
     }

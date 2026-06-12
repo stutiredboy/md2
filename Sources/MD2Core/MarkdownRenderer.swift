@@ -133,7 +133,7 @@ public struct MarkdownRenderer: Sendable {
                 continue
             }
 
-            if let list = listBlock(from: lines, startIndex: index, footnotes: footnotes) {
+            if let list = listBlock(from: lines, startIndex: index, footnotes: footnotes, lineOffset: lineOffset) {
                 appendBlock(list.html, from: index, to: list.nextIndex)
                 index = list.nextIndex
                 continue
@@ -414,14 +414,16 @@ public struct MarkdownRenderer: Sendable {
         return ("<blockquote>\n\(quote)\n</blockquote>", index)
     }
 
-    private func listBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext) -> (html: String, nextIndex: Int)? {
+    private func listBlock(from lines: [String], startIndex: Int, footnotes: FootnoteContext, lineOffset: Int = 0) -> (html: String, nextIndex: Int)? {
         guard parseListItem(lines[startIndex]) != nil else { return nil }
 
         // Collect the run of consecutive list lines; indented continuation lines
-        // are included so they can become nested child lists.
+        // are included so they can become nested child lists. Each item records
+        // its absolute source line (`lineOffset` keeps blockquote-nested lists
+        // absolute, matching the block-level source-line spans).
         var items: [ListItem] = []
         var index = startIndex
-        while index < lines.count, let item = parseListItem(lines[index]) {
+        while index < lines.count, let item = parseListItem(lines[index], sourceLine: lineOffset + index + 1) {
             items.append(item)
             index += 1
         }
@@ -466,7 +468,9 @@ public struct MarkdownRenderer: Sendable {
             let checkbox: String
             if let checked = item.checked {
                 hasTask = true
-                checkbox = "<input type=\"checkbox\" disabled\(checked ? " checked" : "")> "
+                // Enabled so a preview click can toggle it; the attribute names
+                // the source line the click maps back to.
+                checkbox = "<input type=\"checkbox\" data-md2-task-line=\"\(item.line)\"\(checked ? " checked" : "")> "
             } else {
                 checkbox = ""
             }
@@ -689,7 +693,10 @@ public struct MarkdownRenderer: Sendable {
         return "<nav class=\"toc\">\n\(items)\n</nav>"
     }
 
-    private func parseListItem(_ line: String) -> ListItem? {
+    /// Parses one source line as a list item. `sourceLine` is the absolute
+    /// 1-based line number recorded on the item; callers that only test
+    /// whether a line is a list item can omit it.
+    private func parseListItem(_ line: String, sourceLine: Int = 0) -> ListItem? {
         let trimmed = line.trimmedMarkdownLine
         let indent = leadingIndentWidth(line)
 
@@ -705,7 +712,7 @@ public struct MarkdownRenderer: Sendable {
                 text = String(text.dropFirst(4))
             }
 
-            return ListItem(kind: .unordered, checked: checked, text: text, indent: indent)
+            return ListItem(kind: .unordered, checked: checked, text: text, indent: indent, line: sourceLine)
         }
 
         guard let match = firstMatch(in: trimmed, pattern: #"^\d+[\.)]\s+(.+)$"#),
@@ -713,7 +720,7 @@ public struct MarkdownRenderer: Sendable {
             return nil
         }
 
-        return ListItem(kind: .ordered, checked: nil, text: String(trimmed[textRange]), indent: indent)
+        return ListItem(kind: .ordered, checked: nil, text: String(trimmed[textRange]), indent: indent, line: sourceLine)
     }
 
     /// Counts the leading whitespace of a line in columns, treating a tab as 4
@@ -1240,6 +1247,7 @@ public struct MarkdownRenderer: Sendable {
 
         .task-list input {
             margin-right: 0.45em;
+            cursor: pointer;
         }
 
         /* Typeset math inherits the preview foreground color for light/dark legibility. */
@@ -1617,6 +1625,9 @@ private struct ListItem {
     /// Raw leading-indentation width in columns (a tab counts as 4). Used to
     /// derive nesting depth when building nested lists.
     let indent: Int
+    /// Absolute 1-based source line of the item, so a task checkbox can carry
+    /// the line a preview click must toggle (`data-md2-task-line`).
+    let line: Int
 }
 
 private enum ListKind: Equatable {

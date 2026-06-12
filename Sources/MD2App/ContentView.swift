@@ -351,6 +351,14 @@ struct ContentView: View {
                     viewportReader: previewViewport,
                     onAnchorChange: { previewAnchor = $0 },
                     onEnterEdit: { requestMode(.write) },
+                    onToggleTask: { line, checked in
+                        // Capture the live viewport first so the reload the
+                        // toggle triggers can land back where the user was.
+                        previewViewport.currentAnchor { fresh in
+                            guard document.toggleTask(atLine: line, to: checked) else { return }
+                            document.previewJumpAnchor = fresh ?? previewAnchor
+                        }
+                    },
                     findQuery: $previewFindQuery,
                     findNavigation: $previewFindNavigation,
                     focusToken: previewSurfaceFocusToken,

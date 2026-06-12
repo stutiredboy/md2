@@ -38,6 +38,9 @@ struct MarkdownPreviewView: NSViewRepresentable {
     var onAnchorChange: (_ anchor: ViewportAnchor) -> Void = { _ in }
     /// Called on a Cmd+double-click, requesting a switch to edit mode.
     var onEnterEdit: () -> Void = {}
+    /// Called when a task checkbox is clicked, carrying the 1-based source
+    /// line to rewrite and the absolute state the checkbox now shows.
+    var onToggleTask: (_ line: Int, _ checked: Bool) -> Void = { _, _ in }
     /// The current find query; running search whenever it changes.
     @Binding var findQuery: String
     /// A next/previous navigation request; consumed (set to nil) once applied.
@@ -53,6 +56,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
 
     private static let enterEditMessageName = "enterEdit"
     private static let anchorMessageName = "anchorChange"
+    private static let toggleTaskMessageName = "toggleTask"
 
     /// Filename pieces for the temporary preview file written alongside the
     /// document (kept in the document directory so relative image paths resolve
@@ -78,6 +82,19 @@ struct MarkdownPreviewView: NSViewRepresentable {
             if (event.metaKey) {
                 window.webkit.messageHandlers.\(Self.enterEditMessageName).postMessage(null);
             }
+        });
+        // Task checkboxes are the preview's one interactive element: the click
+        // toggles the box optimistically, and native rewrites the source line
+        // (the re-render that follows is the authoritative state).
+        document.addEventListener('click', function (event) {
+            var box = event.target;
+            if (!box || box.tagName !== 'INPUT' || !box.hasAttribute('data-md2-task-line')) { return; }
+            var line = parseInt(box.getAttribute('data-md2-task-line'), 10);
+            if (isNaN(line)) { return; }
+            window.webkit.messageHandlers.\(Self.toggleTaskMessageName).postMessage({
+                line: line,
+                checked: !!box.checked
+            });
         });
         (function () {
             // Suppress anchor reporting while we are programmatically scrolling,
@@ -410,6 +427,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
         configuration.userContentController.addUserScript(userScript)
         configuration.userContentController.add(context.coordinator, name: Self.enterEditMessageName)
         configuration.userContentController.add(context.coordinator, name: Self.anchorMessageName)
+        configuration.userContentController.add(context.coordinator, name: Self.toggleTaskMessageName)
 
         let webView = PreviewWebView(frame: .zero, configuration: configuration)
         webView.onFindAction = { action in
@@ -433,6 +451,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.onEnterEdit = onEnterEdit
+        context.coordinator.onToggleTask = onToggleTask
         context.coordinator.onAnchorChange = onAnchorChange
         context.coordinator.onFindShortcut = onFindShortcut
         context.coordinator.onFindResult = onFindResult
@@ -542,6 +561,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator {
         let coordinator = Coordinator()
         coordinator.onEnterEdit = onEnterEdit
+        coordinator.onToggleTask = onToggleTask
         return coordinator
     }
 
@@ -628,6 +648,7 @@ struct MarkdownPreviewView: NSViewRepresentable {
         let previewID = UUID().uuidString
         var previewFileURL: URL?
         var onEnterEdit: () -> Void = {}
+        var onToggleTask: (_ line: Int, _ checked: Bool) -> Void = { _, _ in }
         var onAnchorChange: (_ anchor: ViewportAnchor) -> Void = { _ in }
         var onFindShortcut: (_ action: FindCommand.Action) -> Void = { _ in }
         var onFindResult: (_ total: Int, _ index: Int) -> Void = { _, _ in }
@@ -727,6 +748,11 @@ struct MarkdownPreviewView: NSViewRepresentable {
             switch message.name {
             case MarkdownPreviewView.enterEditMessageName:
                 onEnterEdit()
+            case MarkdownPreviewView.toggleTaskMessageName:
+                guard let body = message.body as? [String: Any],
+                      let line = (body["line"] as? NSNumber)?.intValue,
+                      let checked = (body["checked"] as? NSNumber)?.boolValue else { return }
+                onToggleTask(line, checked)
             case MarkdownPreviewView.anchorMessageName:
                 guard let body = message.body as? [String: Any] else { return }
                 onAnchorChange(Self.viewportAnchor(fromMessage: body))

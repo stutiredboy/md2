@@ -27,7 +27,7 @@ struct MarkdownRendererTests {
         #expect(html.contains("<em>soft</em>"))
         #expect(html.contains(#"<a href="https://example.com">link</a>"#))
         #expect(html.contains(#"<ul class="task-list">"#))
-        #expect(html.contains(#"<input type="checkbox" disabled checked>"#))
+        #expect(html.contains(#"<input type="checkbox" checked>"#))
         #expect(html.contains("<table>"))
         #expect(html.contains("<code>1</code>"))
         #expect(html.contains(#"<code class="language-swift">"#))
@@ -141,7 +141,7 @@ struct MarkdownRendererTests {
 
         let html = MarkdownRenderer().render(markdown).html.withoutSourceLineMetadata
 
-        #expect(html.contains(#"<ul class="task-list">\#n<li><input type="checkbox" disabled checked> done</li>"#))
+        #expect(html.contains(#"<ul class="task-list">\#n<li><input type="checkbox" checked> done</li>"#))
         // The outer list has no task item, so it is not a task-list.
         #expect(html.contains("<ul>\n<li>parent"))
     }
