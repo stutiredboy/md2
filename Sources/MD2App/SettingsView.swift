@@ -15,12 +15,14 @@ struct SettingsView: View {
 
                 Picker(settings.text(.defaultOpenMode), selection: $settings.defaultMode) {
                     Text(settings.text(.write)).tag(EditorMode.write)
+                    Text(settings.text(.sideBySide)).tag(EditorMode.split)
                     Text(settings.text(.read)).tag(EditorMode.read)
                 }
                 .pickerStyle(.segmented)
 
                 Picker(settings.text(.newDocumentMode), selection: $settings.newDocumentMode) {
                     Text(settings.text(.write)).tag(EditorMode.write)
+                    Text(settings.text(.sideBySide)).tag(EditorMode.split)
                     Text(settings.text(.read)).tag(EditorMode.read)
                 }
                 .pickerStyle(.segmented)
@@ -30,7 +32,7 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .padding(22)
-        .frame(width: 430)
+        .frame(width: 480)
         .navigationTitle(settings.text(.settingsTitle))
     }
 }

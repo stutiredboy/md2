@@ -230,4 +230,41 @@ struct MarkdownRendererTests {
         #expect(!document.html.contains("line one  <br>"))
         #expect(!document.html.contains("line one<br><br>line two"))
     }
+
+    // The live-preview (Side by Side) path swaps the rendered content into the
+    // page's <main> in place. It relies on the rendered `body` being the
+    // unwrapped content and on the render routines being exposed as re-runnable
+    // window functions rather than one-shot IIFEs.
+    @Test func exposesBodyContentWithoutDocumentShell() {
+        let document = MarkdownRenderer().render("# Title\n\nA paragraph.")
+
+        #expect(document.body.contains("Title"))
+        #expect(document.body.contains("A paragraph."))
+        // The body is the inner content only — no document shell.
+        #expect(!document.body.contains("<html>"))
+        #expect(!document.body.contains("<main>"))
+        // The full document wraps that same body inside <main>.
+        #expect(document.html.contains("<main>"))
+        #expect(document.html.contains(document.body))
+    }
+
+    @Test func exposesReRunnableMathRenderHook() {
+        let html = MarkdownRenderer().render("Inline $x^2$ math.").html
+
+        #expect(html.contains("window.__md2RenderMath = function"))
+        #expect(html.contains("window.__md2RenderMath(document);"))
+    }
+
+    @Test func exposesReRunnableDiagramRenderHookWhenDiagramsPresent() {
+        let markdown = """
+        ```mermaid
+        graph TD; A-->B;
+        ```
+        """
+
+        let html = MarkdownRenderer().render(markdown).html
+
+        #expect(html.contains("window.__md2RenderDiagrams = function"))
+        #expect(html.contains("window.__md2RenderDiagrams(document);"))
+    }
 }

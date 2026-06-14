@@ -118,6 +118,7 @@ struct RuntimeAppBundleBuilder {
 
         try fileManager.copyItem(at: executableURL, to: bundledExecutableURL)
         try copyIconIfAvailable(to: resourcesURL)
+        try copyCompanionResourceBundles(from: executableURL.deletingLastPathComponent(), to: resourcesURL)
 
         let attributes = try fileManager.attributesOfItem(atPath: executableURL.path)
         if let permissions = attributes[.posixPermissions] {
@@ -143,6 +144,23 @@ struct RuntimeAppBundleBuilder {
 
         let destinationURL = resourcesURL.appendingPathComponent("AppIcon.icns")
         try FileManager.default.copyItem(at: iconURL, to: destinationURL)
+    }
+
+    private func copyCompanionResourceBundles(from productDirectory: URL, to resourcesURL: URL) throws {
+        let fileManager = FileManager.default
+        let entries = try fileManager.contentsOfDirectory(
+            at: productDirectory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        )
+
+        for entry in entries where entry.pathExtension == "bundle" {
+            let destinationURL = resourcesURL.appendingPathComponent(entry.lastPathComponent, isDirectory: true)
+            if fileManager.fileExists(atPath: destinationURL.path) {
+                try fileManager.removeItem(at: destinationURL)
+            }
+            try fileManager.copyItem(at: entry, to: destinationURL)
+        }
     }
 
     private var infoPlist: String {

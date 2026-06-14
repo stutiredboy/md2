@@ -65,4 +65,30 @@ struct AppSettingsPresentationModeTests {
         let second = AppSettings(defaults: defaults)
         #expect(second.newDocumentMode == .read)
     }
+
+    @Test func sideBySideModePersistsForBothPreferences() {
+        let suiteName = "AppSettingsPresentationModeTests-split-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let first = AppSettings(defaults: defaults)
+        first.defaultMode = .split
+        first.newDocumentMode = .split
+
+        let second = AppSettings(defaults: defaults)
+        #expect(second.defaultMode == .split)
+        #expect(second.newDocumentMode == .split)
+        #expect(second.presentationMode(isFileBacked: true) == .split)
+        #expect(second.presentationMode(isFileBacked: false) == .split)
+    }
+
+    @Test func unknownStoredModeFallsBackToEdit() {
+        let suiteName = "AppSettingsPresentationModeTests-unknown-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("nonsense", forKey: "MD2.DefaultMode")
+
+        let settings = AppSettings(defaults: defaults)
+        #expect(settings.defaultMode == .write)
+    }
 }

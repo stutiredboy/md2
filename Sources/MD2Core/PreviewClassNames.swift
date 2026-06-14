@@ -10,17 +10,17 @@ import Foundation
 /// coupling. Pure-stylesheet classes consumed solely by the inlined CSS (`toc`,
 /// `task-list`, `footnote-ref`, `image-frame`, …) are intentionally left as
 /// literals — they have no Swift detection or JS dependency to drift against.
-enum PreviewClass {
-    static let diagram = "diagram"
-    static let diagramMermaid = "diagram-mermaid"
-    static let diagramFlow = "diagram-flow"
-    static let diagramSequence = "diagram-sequence"
-    static let diagramPending = "diagram-pending"
-    static let diagramReady = "diagram-ready"
-    static let diagramError = "diagram-error"
+public enum PreviewClass {
+    public static let diagram = "diagram"
+    public static let diagramMermaid = "diagram-mermaid"
+    public static let diagramFlow = "diagram-flow"
+    public static let diagramSequence = "diagram-sequence"
+    public static let diagramPending = "diagram-pending"
+    public static let diagramReady = "diagram-ready"
+    public static let diagramError = "diagram-error"
 
-    static let math = "math"
-    static let mathDisplay = "math-display"
-    static let mathInline = "math-inline"
-    static let mathError = "math-error"
+    public static let math = "math"
+    public static let mathDisplay = "math-display"
+    public static let mathInline = "math-inline"
+    public static let mathError = "math-error"
 }

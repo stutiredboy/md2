@@ -102,7 +102,9 @@ enum L10nKey: String {
     case mode
     case write
     case read
+    case sideBySide
     case writeOrRead
+    case writeReadOrSplit
     case words
     case chars
     case lines
@@ -157,7 +159,9 @@ enum L10n {
         .mode: "Mode",
         .write: "Edit",
         .read: "Preview",
+        .sideBySide: "Side by Side",
         .writeOrRead: "Edit or preview",
+        .writeReadOrSplit: "Edit, side by side, or preview",
         .words: "words",
         .chars: "chars",
         .lines: "lines",
@@ -202,7 +206,9 @@ enum L10n {
         .mode: "模式",
         .write: "编辑",
         .read: "预览",
+        .sideBySide: "双栏",
         .writeOrRead: "编辑或预览",
+        .writeReadOrSplit: "编辑、双栏或预览",
         .words: "词",
         .chars: "字符",
         .lines: "行",

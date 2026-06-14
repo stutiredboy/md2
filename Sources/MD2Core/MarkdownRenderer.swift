@@ -17,6 +17,7 @@ public struct MarkdownRenderer: Sendable {
 
         return RenderedDocument(
             html: html,
+            body: body,
             outline: outline,
             stats: DocumentStats(markdown: markdown)
         )
@@ -1365,9 +1366,14 @@ public struct MarkdownRenderer: Sendable {
         \(MathAssets.mhchem)
         </script>
         <script>
-        (function () {
+        // Exposed as a re-runnable function (scoped to a root element) so the
+        // live-preview content swap can re-render math over freshly injected
+        // content without reloading the page. Called once over the whole
+        // document at load.
+        window.__md2RenderMath = function (root) {
             if (typeof katex === "undefined") { return; }
-            var nodes = document.querySelectorAll(".\(PreviewClass.mathInline), .\(PreviewClass.mathDisplay)");
+            root = root || document;
+            var nodes = root.querySelectorAll(".\(PreviewClass.mathInline), .\(PreviewClass.mathDisplay)");
             for (var i = 0; i < nodes.length; i++) {
                 var el = nodes[i];
                 var tex = el.textContent;
@@ -1379,7 +1385,8 @@ public struct MarkdownRenderer: Sendable {
                     el.textContent = tex;
                 }
             }
-        })();
+        };
+        window.__md2RenderMath(document);
         </script>
         \(diagramScripts(for: body))
         </body>
@@ -1431,7 +1438,14 @@ public struct MarkdownRenderer: Sendable {
     /// Kept independent from the math bootstrap. Engine guards (`typeof …`) make
     /// it safe to run even when an engine script was not inlined.
     private let diagramBootstrap = """
-    (function () {
+    // Exposed as a re-runnable function (scoped to a root element) so the
+    // live-preview content swap can re-render diagrams over freshly injected
+    // content without reloading the page. Called once over the whole document
+    // at load. Engine guards (`typeof …`) keep it safe when an engine script
+    // was not inlined (e.g. a diagram type added after the initial load).
+    window.__md2RenderDiagrams = function (root) {
+        root = root || document;
+        window.__md2MermaidSeq = window.__md2MermaidSeq || 0;
         var dark = window.matchMedia
             && window.matchMedia("(prefers-color-scheme: dark)").matches;
 
@@ -1450,7 +1464,7 @@ public struct MarkdownRenderer: Sendable {
         }
 
         // flowchart.js — depends on the global `flowchart` (+ Raphael).
-        var flows = document.querySelectorAll(".\(PreviewClass.diagramFlow)");
+        var flows = root.querySelectorAll(".\(PreviewClass.diagramFlow)");
         for (var i = 0; i < flows.length; i++) {
             var el = flows[i];
             var source = el.textContent;
@@ -1465,7 +1479,7 @@ public struct MarkdownRenderer: Sendable {
         }
 
         // js-sequence-diagrams — depends on the global `Diagram` (+ Underscore, Raphael).
-        var seqs = document.querySelectorAll(".\(PreviewClass.diagramSequence)");
+        var seqs = root.querySelectorAll(".\(PreviewClass.diagramSequence)");
         for (var j = 0; j < seqs.length; j++) {
             var sel = seqs[j];
             var ssource = sel.textContent;
@@ -1480,7 +1494,7 @@ public struct MarkdownRenderer: Sendable {
         }
 
         // Mermaid — self-contained; render explicitly (startOnLoad disabled).
-        var mers = document.querySelectorAll(".\(PreviewClass.diagramMermaid)");
+        var mers = root.querySelectorAll(".\(PreviewClass.diagramMermaid)");
         if (typeof mermaid === "undefined") {
             for (var u = 0; u < mers.length; u++) { reveal(mers[u]); }
         } else if (mers.length) {
@@ -1504,10 +1518,11 @@ public struct MarkdownRenderer: Sendable {
                     } catch (err) {
                         fail(el, source);
                     }
-                })(mers[k], k);
+                })(mers[k], window.__md2MermaidSeq++);
             }
         }
-    })();
+    };
+    window.__md2RenderDiagrams(document);
     """
 
     private func replaceMatches(

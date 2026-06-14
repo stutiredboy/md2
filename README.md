@@ -14,7 +14,7 @@
 
 ## Features
 
-- **Single-window editing** — one main surface with `Write` and `Read` modes instead of a side-by-side preview.
+- **Three presentation modes** — `Write`, `Read`, and `Side by Side` (split editor + live preview).
 - **Native AppKit text editing** with lightweight Markdown styling.
 - **Live-rendered HTML** reading mode.
 - **Outline sidebar** generated from headings.
@@ -25,8 +25,9 @@
 - **Math typesetting** — inline `$...$` and display `$$...$$` TeX rendered offline with bundled [KaTeX](https://katex.org/) (no network required), including the mhchem extension for chemistry (`\ce{...}`).
 - **Diagrams** — `mermaid`, `flow` ([flowchart.js](https://flowchart.js.org/)), and `sequence` ([js-sequence-diagrams](https://bramp.github.io/js-sequence-diagrams/)) code blocks rendered offline with bundled engines (no network required).
 - **Footnotes** — `[^id]` inline references rendered as numbered superscript links; `[^id]: text` definitions collected into a trailing footnotes section with back-references. Supports named labels, multi-line definitions, duplicate references, and graceful fallback for undefined labels. Offline-rendered, legible in both light and dark modes.
-- **Quick mode switching** — press `Esc` in the editor to switch to preview; `Cmd+double-click` in preview to jump back to edit.
-- **App settings** for language, default open mode, and default outline visibility.
+- **Quick mode switching** — press `Esc` in the editor to switch to preview; `Cmd+double-click` in preview to jump back to edit; or select Side by Side from the toolbar to see both at once.
+- **Bidirectional scroll sync** — in Side by Side mode, scrolling either pane keeps the other aligned to the same content.
+- **App settings** for language, default open mode (Edit / Side by Side / Preview), and default outline visibility.
 - **Markdown file type declaration** for `.md` and `.markdown` files when packaged.
 
 See [Docs/MarkdownSupport.md](Docs/MarkdownSupport.md) for the tested Markdown/Typora support matrix.

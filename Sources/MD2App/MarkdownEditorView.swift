@@ -41,6 +41,10 @@ struct MarkdownEditorView: NSViewRepresentable {
     @Binding var replaceCommand: FindReplaceCommand?
     /// Changes whenever the editor surface should become first responder.
     let focusToken: UUID
+    /// Programmatic line/anchor jumps usually focus the editor in single-pane
+    /// mode. In Side by Side, the editor can be only the scroll follower, so it
+    /// must not steal focus from the preview pane.
+    var focusOnProgrammaticScroll: Bool = true
     /// Called when the text view receives a standard Find key/menu action before
     /// SwiftUI commands can route it through `DocumentStore`.
     var onFindShortcut: (_ action: FindCommand.Action) -> Void = { _ in }
@@ -161,7 +165,7 @@ struct MarkdownEditorView: NSViewRepresentable {
 
         if let anchor = jumpAnchor {
             context.coordinator.applyAnchorUntilSettled(anchor, in: scrollView) { anchor, scrollView in
-                apply(anchor: anchor, in: scrollView, textView: textView)
+                apply(anchor: anchor, in: scrollView, textView: textView, focus: focusOnProgrammaticScroll)
             }
             DispatchQueue.main.async {
                 self.jumpAnchor = nil
@@ -173,7 +177,7 @@ struct MarkdownEditorView: NSViewRepresentable {
             let coordinator = context.coordinator
             DispatchQueue.main.async {
                 let applied = coordinator.performProgrammaticScroll(in: scrollView) {
-                    scroll(to: targetLine, in: textView)
+                    scroll(to: targetLine, in: textView, focus: focusOnProgrammaticScroll)
                 }
                 if applied {
                     self.jumpLine = nil
@@ -181,7 +185,7 @@ struct MarkdownEditorView: NSViewRepresentable {
                 } else {
                     DispatchQueue.main.async {
                         _ = coordinator.performProgrammaticScroll(in: scrollView) {
-                            scroll(to: targetLine, in: textView)
+                            scroll(to: targetLine, in: textView, focus: focusOnProgrammaticScroll)
                         }
                         self.jumpLine = nil
                         self.jumpFraction = nil
@@ -213,9 +217,14 @@ struct MarkdownEditorView: NSViewRepresentable {
     /// its target line (block start advanced by intra-block progress) and is
     /// placed near the top of the viewport; otherwise the proportional scroll
     /// fraction is the fallback. Both paths force layout and clamp the offset.
-    private func apply(anchor: ViewportAnchor, in scrollView: NSScrollView, textView: NSTextView) -> Bool {
+    private func apply(
+        anchor: ViewportAnchor,
+        in scrollView: NSScrollView,
+        textView: NSTextView,
+        focus: Bool
+    ) -> Bool {
         if let targetLine = anchor.targetSourceLine {
-            return scroll(to: targetLine, in: textView)
+            return scroll(to: targetLine, in: textView, focus: focus)
         }
         return scroll(toFraction: anchor.scrollFraction, in: scrollView)
     }
@@ -261,7 +270,7 @@ struct MarkdownEditorView: NSViewRepresentable {
         return true
     }
 
-    private func scroll(to line: Int, in textView: NSTextView) -> Bool {
+    private func scroll(to line: Int, in textView: NSTextView, focus: Bool = true) -> Bool {
         let lineIndex = max(1, line)
         let string = textView.string as NSString
         var currentLine = 1
@@ -281,8 +290,10 @@ struct MarkdownEditorView: NSViewRepresentable {
         // first responder triggers happens before our explicit clamp-to-top, so
         // the final resting position is the clamped target (0 when the document
         // fits the viewport) rather than wherever the focus scroll landed.
-        textView.window?.makeFirstResponder(textView)
-        textView.setSelectedRange(targetRange)
+        if focus {
+            textView.window?.makeFirstResponder(textView)
+            textView.setSelectedRange(targetRange)
+        }
         return scrollLineToTop(charRange: targetRange, in: textView)
     }
 

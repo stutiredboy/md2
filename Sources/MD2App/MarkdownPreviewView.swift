@@ -24,7 +24,14 @@ final class PreviewViewportReader {
 
 struct MarkdownPreviewView: NSViewRepresentable {
     let html: String
+    /// The rendered content inside `<main>`, used for the in-place live update
+    /// path so edits do not reload the whole page (see `liveUpdate`).
+    var bodyHTML: String = ""
     let baseURL: URL?
+    /// When true (Side by Side mode), content-only changes are applied in place
+    /// via `__md2ApplyContent` — preserving scroll position and avoiding the
+    /// full-page reload flash — instead of reloading the web view.
+    var liveUpdate: Bool = false
     @Binding var jumpHeadingID: String?
     /// Fraction (0...1) to scroll to after load when no heading anchor applies.
     @Binding var jumpFraction: Double?
@@ -313,6 +320,24 @@ struct MarkdownPreviewView: NSViewRepresentable {
                 });
             };
 
+            // Live preview content swap: replaces the rendered content inside
+            // <main> in place (without reloading the page), then re-runs the
+            // math and diagram bootstraps over the new subtree. Because the
+            // page shell and scroll node are never torn down, the viewport's
+            // scroll position is preserved across edits. The native side only
+            // routes an update through here when no new diagram engine is
+            // required (otherwise it does a full reload that rebuilds <head>),
+            // so the render hooks below exist whenever there is content to
+            // render.
+            window.__md2ApplyContent = function (bodyHTML) {
+                var main = document.querySelector('main');
+                if (!main) { return; }
+                if (window.__md2FindClear) { window.__md2FindClear(); }
+                main.innerHTML = bodyHTML;
+                if (window.__md2RenderMath) { window.__md2RenderMath(main); }
+                if (window.__md2RenderDiagrams) { window.__md2RenderDiagrams(main); }
+            };
+
             // --- Find (preview, read-only) --------------------------------
             // Walks text nodes and wraps case-insensitive matches in <mark>
             // elements so they can be highlighted and scrolled to. Returns
@@ -471,25 +496,43 @@ struct MarkdownPreviewView: NSViewRepresentable {
             coordinator.captureAnchor(in: webView, completion: completion)
         }
 
-        if context.coordinator.lastHTML != html || context.coordinator.lastBaseURL != baseURL {
+        let htmlChanged = context.coordinator.lastHTML != html
+        let baseURLChanged = context.coordinator.lastBaseURL != baseURL
+        if htmlChanged || baseURLChanged {
+            // In Side by Side mode, a content-only change (same document, no new
+            // diagram engine needed) is applied in place so typing does not
+            // reload the page or reset the preview's scroll. Everything else —
+            // the initial load, a base-URL/document change, or a new diagram
+            // engine that must be inlined into <head> — goes through a full load.
+            let canLiveUpdate = liveUpdate
+                && context.coordinator.isLoaded
+                && !baseURLChanged
+                && !context.coordinator.lastHTML.isEmpty
+                && !Self.requiresNewEngine(newBody: bodyHTML, loadedBody: context.coordinator.lastBody)
             context.coordinator.lastHTML = html
+            context.coordinator.lastBody = bodyHTML
             context.coordinator.lastBaseURL = baseURL
-            context.coordinator.beginLoading()
             context.coordinator.lastFindQuery = nil
-            // Load with the pending heading as a URL fragment so WebKit scrolls
-            // to it natively during parsing. This is the only thing that can
-            // position the page before the inlined diagram/math engine scripts
-            // finish executing (which blocks all JavaScript, including our own
-            // scroll code, for several seconds on engine-heavy documents). A
-            // viewport anchor's fallback heading gives the same early, coarse
-            // position; the block/source-line target then refines it.
-            load(
-                html,
-                baseURL: baseURL,
-                fragment: jumpAnchor?.fallbackHeadingID ?? jumpHeadingID,
-                in: webView,
-                coordinator: context.coordinator
-            )
+
+            if canLiveUpdate {
+                context.coordinator.applyLiveContent(bodyHTML, in: webView)
+            } else {
+                context.coordinator.beginLoading()
+                // Load with the pending heading as a URL fragment so WebKit scrolls
+                // to it natively during parsing. This is the only thing that can
+                // position the page before the inlined diagram/math engine scripts
+                // finish executing (which blocks all JavaScript, including our own
+                // scroll code, for several seconds on engine-heavy documents). A
+                // viewport anchor's fallback heading gives the same early, coarse
+                // position; the block/source-line target then refines it.
+                load(
+                    html,
+                    baseURL: baseURL,
+                    fragment: jumpAnchor?.fallbackHeadingID ?? jumpHeadingID,
+                    in: webView,
+                    coordinator: context.coordinator
+                )
+            }
         }
 
         // Anchor/heading/fraction targets are also applied once the page has
@@ -548,6 +591,21 @@ struct MarkdownPreviewView: NSViewRepresentable {
         webView.evaluateJavaScript("window.__md2FindNext(\(forward));") { result, _ in
             coordinator.reportFindResult(result)
         }
+    }
+
+    /// Whether `newBody` needs a diagram engine that the currently-loaded page
+    /// (built from `loadedBody`) does not have inlined. Diagram engine scripts
+    /// are only injected into `<head>` for the diagram kinds present at load, so
+    /// a live in-place content swap cannot introduce a new kind; that case must
+    /// fall back to a full reload. KaTeX is always inlined, so math never forces
+    /// a reload.
+    private static func requiresNewEngine(newBody: String, loadedBody: String) -> Bool {
+        let kinds = [
+            PreviewClass.diagramMermaid,
+            PreviewClass.diagramFlow,
+            PreviewClass.diagramSequence
+        ]
+        return kinds.contains { newBody.contains($0) && !loadedBody.contains($0) }
     }
 
     private static func escapeForJS(_ string: String) -> String {
@@ -644,6 +702,9 @@ struct MarkdownPreviewView: NSViewRepresentable {
 
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         var lastHTML = ""
+        /// The last `<main>` content applied (via full load or live swap), used
+        /// to decide whether an update can be a live in-place swap.
+        var lastBody = ""
         var lastBaseURL: URL?
         let previewID = UUID().uuidString
         var previewFileURL: URL?
@@ -655,9 +716,65 @@ struct MarkdownPreviewView: NSViewRepresentable {
         var lastFindQuery: String?
         var lastFocusToken: UUID?
 
-        private var isLoaded = false
+        private(set) var isLoaded = false
         private var pendingScroll: ModeSwitchAnchor?
         private var pendingFindQuery: String?
+
+        /// Coalesces rapid live content swaps (one per keystroke) into a single
+        /// JS push, keeping typing smooth. The latest body wins.
+        private var pendingLiveBody: String?
+        private var liveUpdateWorkItem: DispatchWorkItem?
+        private var liveUpdateGeneration = 0
+        private static let liveUpdateDebounce: TimeInterval = 0.09
+
+        /// Replaces the rendered content in place (debounced), preserving the
+        /// preview's current source anchor. Called only when the page is loaded
+        /// and no new diagram engine is required (the caller guarantees this).
+        func applyLiveContent(_ bodyHTML: String, in webView: WKWebView) {
+            pendingLiveBody = bodyHTML
+            liveUpdateGeneration += 1
+            let generation = liveUpdateGeneration
+            liveUpdateWorkItem?.cancel()
+            let work = DispatchWorkItem { [weak self, weak webView] in
+                guard let self, let webView, let body = self.pendingLiveBody else { return }
+                guard generation == self.liveUpdateGeneration else { return }
+                self.pendingLiveBody = nil
+
+                webView.evaluateJavaScript(
+                    "window.__md2CaptureAnchor ? window.__md2CaptureAnchor() : null;"
+                ) { [weak self, weak webView] result, _ in
+                    guard let self, let webView, generation == self.liveUpdateGeneration else { return }
+                    let anchor = (result as? [String: Any]).map(Self.viewportAnchor(fromMessage:))
+                    let script = Self.liveContentScript(bodyHTML: body, anchor: anchor)
+                    webView.evaluateJavaScript(script) { [weak self, weak webView] _, _ in
+                        guard let self, let webView else { return }
+                        if let query = self.lastFindQuery, !query.isEmpty {
+                            self.runFindWhenReady(query, in: webView)
+                        }
+                    }
+                }
+            }
+            liveUpdateWorkItem = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.liveUpdateDebounce, execute: work)
+        }
+
+        private static func liveContentScript(bodyHTML: String, anchor: ViewportAnchor?) -> String {
+            var script = "window.__md2ApplyContent(\(jsStringLiteral(bodyHTML)));"
+            if let anchor {
+                script += "window.__md2ScrollToViewportAnchor(\(viewportAnchorJS(anchor)));"
+            }
+            return script
+        }
+
+        /// Encodes a string as a JavaScript string literal (quotes included) so
+        /// arbitrary rendered HTML can be passed safely to `evaluateJavaScript`.
+        private static func jsStringLiteral(_ string: String) -> String {
+            guard let data = try? JSONSerialization.data(withJSONObject: string, options: [.fragmentsAllowed]),
+                  let json = String(data: data, encoding: .utf8) else {
+                return "\"\""
+            }
+            return json
+        }
 
         /// How long a mode-switch capture waits for the page's JavaScript
         /// before falling back to the cached anchor.

@@ -39,6 +39,21 @@ struct ContentView: View {
     @State private var previewSurfaceFocusToken = UUID()
     @State private var previewMatchTotal = 0
     @State private var previewMatchIndex = 0
+    /// Side by Side: the pane that most recently had user interaction, so a
+    /// menu-driven Find routes to the surface the user is actually working in.
+    @State private var focusedPane: SplitPane = .editor
+    /// Side by Side scroll-sync driver: the pane currently driving the other.
+    /// While set, the follower's settle-time anchor reports are ignored so the
+    /// two panes cannot oscillate against each other.
+    @State private var splitSyncSource: SplitPane?
+    /// Re-armed every time a pane drives the sync; the matching delayed reset is
+    /// the only one that clears `splitSyncSource`.
+    @State private var splitSyncToken = UUID()
+    /// Coalesces the editor's per-tick scroll reports into one preview drive, so
+    /// fast scrolling does not flood the preview with scroll commands.
+    @State private var editorSyncWork: DispatchWorkItem?
+    /// Per-pane minimum width in Side by Side so neither side collapses.
+    private let splitPaneMinWidth: CGFloat = 340
     private let onOpen: () -> Void
 
     init(document: DocumentStore, settings: AppSettings, onOpen: @escaping () -> Void) {
@@ -68,7 +83,7 @@ struct ContentView: View {
             Divider()
             StatusBar(stats: document.rendered.stats, url: document.fileURL, settings: settings)
         }
-        .frame(minWidth: 780, minHeight: 540)
+        .frame(minWidth: mode == .split ? 1000 : 780, minHeight: 540)
         .navigationTitle(document.displayTitle)
         .onChange(of: document.documentIdentity) { _, _ in
             applyDefaultPresentation()
@@ -112,11 +127,12 @@ struct ContentView: View {
                     selection: Binding(get: { mode }, set: { requestMode($0) })
                 ) {
                     Image(systemName: "pencil").tag(EditorMode.write)
+                    Image(systemName: "rectangle.split.2x1").tag(EditorMode.split)
                     Image(systemName: "doc.richtext").tag(EditorMode.read)
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 92)
-                .help(settings.text(.writeOrRead))
+                .frame(width: 132)
+                .help(settings.text(.writeReadOrSplit))
             }
         }
         .alert(item: $document.alert) { alert in
@@ -143,6 +159,13 @@ struct ContentView: View {
             handleEditorFindAction(command.action)
         case .read:
             handlePreviewFindAction(command.action)
+        case .split:
+            // Route a menu-driven Find to the pane the user last worked in.
+            if focusedPane == .preview {
+                handlePreviewFindAction(command.action)
+            } else {
+                handleEditorFindAction(command.action)
+            }
         }
     }
 
@@ -227,19 +250,20 @@ struct ContentView: View {
     private func requestMode(_ newMode: EditorMode) {
         guard newMode != mode else { return }
 
-        switch newMode {
+        switch mode {
+        case .write, .split:
+            // The editor pane's anchor is readable synchronously; in Side by
+            // Side both panes are aligned, so the editor is the reliable source.
+            deliver(anchor: editorAnchorForPreview(), to: newMode)
         case .read:
-            // Write → Read: the editor's anchor is readable synchronously.
-            deliver(anchor: editorAnchorForPreview(), switchingTo: .read)
-        case .write:
-            // Read → Write: ask the live page first; its capture answers fast
-            // or times out to the cached debounced anchor.
+            // Read → *: ask the live page first; its capture answers fast or
+            // times out to the cached debounced anchor.
             guard !isCapturingPreviewAnchor else { return }
             isCapturingPreviewAnchor = true
             previewViewport.currentAnchor { fresh in
                 isCapturingPreviewAnchor = false
                 guard mode == .read else { return }
-                deliver(anchor: previewAnchorForEditor(fresh: fresh), switchingTo: .write)
+                deliver(anchor: previewAnchorForEditor(fresh: fresh), to: newMode)
             }
         }
     }
@@ -249,7 +273,7 @@ struct ContentView: View {
     /// can never override the fresher viewport anchor. Each direction has its
     /// own anchor binding: the outgoing surface's final `updateNSView` pass
     /// must not be able to consume the incoming surface's target.
-    private func deliver(anchor: ViewportAnchor, switchingTo newMode: EditorMode) {
+    private func deliver(anchor: ViewportAnchor, to newMode: EditorMode) {
         document.jumpLine = nil
         document.jumpHeadingID = nil
         document.jumpFraction = nil
@@ -260,7 +284,14 @@ struct ContentView: View {
         case .write:
             document.previewJumpAnchor = nil
             document.editorJumpAnchor = anchor
+        case .split:
+            // Land both freshly mounted panes on the same content so Side by
+            // Side opens aligned to where the user was.
+            document.editorJumpAnchor = anchor
+            document.previewJumpAnchor = anchor
         }
+        // A mode change starts a clean sync slate.
+        splitSyncSource = nil
         mode = newMode
     }
 
@@ -303,86 +334,188 @@ struct ContentView: View {
     private var editorSurface: some View {
         switch mode {
         case .write:
-            ZStack(alignment: .top) {
-                MarkdownEditorView(
-                    text: $document.text,
-                    jumpLine: $document.jumpLine,
-                    jumpFraction: $document.jumpFraction,
-                    jumpAnchor: $document.editorJumpAnchor,
-                    viewportReader: editorViewport,
-                    onAnchorLineChange: { editorAnchorLine = $0 },
-                    onEnterPreview: { requestMode(.read) },
-                    findQuery: $editorFindQuery,
-                    findNavigation: $editorFindNavigation,
-                    findReplacement: $editorFindReplacement,
-                    replaceCommand: $editorReplaceCommand,
-                    focusToken: editorSurfaceFocusToken,
-                    onFindShortcut: handleEditorFindAction(_:),
-                    onFindResult: { total, index in
-                        editorMatchTotal = total
-                        editorMatchIndex = index
-                    }
-                )
-
-                if editorFindVisible {
-                    EditorFindBar(
-                        query: $editorFindQuery,
-                        replacement: $editorFindReplacement,
-                        showsReplace: editorFindShowsReplace,
-                        focusToken: editorFindFocusToken,
-                        statusText: editorStatusText,
-                        settings: settings,
-                        onNext: { editorFindNavigation = FindCommand(.next) },
-                        onPrevious: { editorFindNavigation = FindCommand(.previous) },
-                        onReplace: { editorReplaceCommand = FindReplaceCommand(.current) },
-                        onReplaceAll: { editorReplaceCommand = FindReplaceCommand(.all) },
-                        onClose: { dismissEditorFind(refocusEditor: true) }
-                    )
-                }
-            }
+            editorPane(inSplit: false)
         case .read:
-            ZStack(alignment: .top) {
-                MarkdownPreviewView(
-                    html: document.rendered.html,
-                    baseURL: document.baseURL,
-                    jumpHeadingID: $document.jumpHeadingID,
-                    jumpFraction: $document.jumpFraction,
-                    jumpAnchor: $document.previewJumpAnchor,
-                    viewportReader: previewViewport,
-                    onAnchorChange: { previewAnchor = $0 },
-                    onEnterEdit: { requestMode(.write) },
-                    onToggleTask: { line, checked in
-                        // Capture the live viewport first so the reload the
-                        // toggle triggers can land back where the user was.
-                        previewViewport.currentAnchor { fresh in
-                            guard document.toggleTask(atLine: line, to: checked) else { return }
-                            document.previewJumpAnchor = fresh ?? previewAnchor
-                        }
-                    },
-                    findQuery: $previewFindQuery,
-                    findNavigation: $previewFindNavigation,
-                    focusToken: previewSurfaceFocusToken,
-                    onFindShortcut: handlePreviewFindAction(_:),
-                    onFindResult: { total, index in
-                        previewMatchTotal = total
-                        previewMatchIndex = index
-                    }
-                )
-
-                if previewFindVisible {
-                    PreviewFindBar(
-                        query: $previewFindQuery,
-                        focusToken: previewFindFocusToken,
-                        statusText: previewStatusText,
-                        settings: settings,
-                        onNext: { previewFindNavigation = FindCommand(.next) },
-                        onPrevious: { previewFindNavigation = FindCommand(.previous) },
-                        onClose: { dismissPreviewFind(refocusPreview: true) }
-                    )
-                }
+            previewPane(inSplit: false)
+        case .split:
+            // Editor on the left, live preview on the right, with a draggable
+            // divider (HSplitView). Each pane is clamped to a usable minimum.
+            HSplitView {
+                editorPane(inSplit: true)
+                    .frame(minWidth: splitPaneMinWidth)
+                previewPane(inSplit: true)
+                    .frame(minWidth: splitPaneMinWidth)
             }
         }
     }
+
+    /// The editor surface (with its find bar). In Side by Side it also drives
+    /// the preview on scroll and claims focus on interaction; the mode-toggle
+    /// shortcut (Esc) is disabled so it cannot accidentally leave split.
+    @ViewBuilder
+    private func editorPane(inSplit: Bool) -> some View {
+        ZStack(alignment: .top) {
+            MarkdownEditorView(
+                text: $document.text,
+                jumpLine: $document.jumpLine,
+                jumpFraction: $document.jumpFraction,
+                jumpAnchor: $document.editorJumpAnchor,
+                viewportReader: editorViewport,
+                onAnchorLineChange: { line in
+                    editorAnchorLine = line
+                    if inSplit { syncEditorToPreview(line: line) }
+                },
+                onEnterPreview: { if !inSplit { requestMode(.read) } },
+                findQuery: $editorFindQuery,
+                findNavigation: $editorFindNavigation,
+                findReplacement: $editorFindReplacement,
+                replaceCommand: $editorReplaceCommand,
+                focusToken: editorSurfaceFocusToken,
+                focusOnProgrammaticScroll: !inSplit,
+                onFindShortcut: { action in
+                    if inSplit { focusedPane = .editor }
+                    handleEditorFindAction(action)
+                },
+                onFindResult: { total, index in
+                    editorMatchTotal = total
+                    editorMatchIndex = index
+                }
+            )
+
+            if editorFindVisible {
+                EditorFindBar(
+                    query: $editorFindQuery,
+                    replacement: $editorFindReplacement,
+                    showsReplace: editorFindShowsReplace,
+                    focusToken: editorFindFocusToken,
+                    statusText: editorStatusText,
+                    settings: settings,
+                    onNext: { editorFindNavigation = FindCommand(.next) },
+                    onPrevious: { editorFindNavigation = FindCommand(.previous) },
+                    onReplace: { editorReplaceCommand = FindReplaceCommand(.current) },
+                    onReplaceAll: { editorReplaceCommand = FindReplaceCommand(.all) },
+                    onClose: { dismissEditorFind(refocusEditor: true) }
+                )
+            }
+        }
+    }
+
+    /// The preview surface (with its find bar). In Side by Side it re-renders in
+    /// place as the document changes (`liveUpdate`), drives the editor on scroll,
+    /// and claims focus on interaction; the mode-toggle gesture (Cmd+double
+    /// click) is disabled so it cannot accidentally leave split.
+    @ViewBuilder
+    private func previewPane(inSplit: Bool) -> some View {
+        ZStack(alignment: .top) {
+            MarkdownPreviewView(
+                html: document.rendered.html,
+                bodyHTML: document.rendered.body,
+                baseURL: document.baseURL,
+                liveUpdate: inSplit,
+                jumpHeadingID: $document.jumpHeadingID,
+                jumpFraction: $document.jumpFraction,
+                jumpAnchor: $document.previewJumpAnchor,
+                viewportReader: previewViewport,
+                onAnchorChange: { anchor in
+                    previewAnchor = anchor
+                    if inSplit { syncPreviewToEditor(anchor: anchor) }
+                },
+                onEnterEdit: { if !inSplit { requestMode(.write) } },
+                onToggleTask: { line, checked in
+                    if inSplit { focusedPane = .preview }
+                    // Capture the live viewport first so the re-render the
+                    // toggle triggers can land back where the user was.
+                    previewViewport.currentAnchor { fresh in
+                        guard document.toggleTask(atLine: line, to: checked) else { return }
+                        document.previewJumpAnchor = fresh ?? previewAnchor
+                    }
+                },
+                findQuery: $previewFindQuery,
+                findNavigation: $previewFindNavigation,
+                focusToken: previewSurfaceFocusToken,
+                onFindShortcut: { action in
+                    if inSplit { focusedPane = .preview }
+                    handlePreviewFindAction(action)
+                },
+                onFindResult: { total, index in
+                    previewMatchTotal = total
+                    previewMatchIndex = index
+                }
+            )
+
+            if previewFindVisible {
+                PreviewFindBar(
+                    query: $previewFindQuery,
+                    focusToken: previewFindFocusToken,
+                    statusText: previewStatusText,
+                    settings: settings,
+                    onNext: { previewFindNavigation = FindCommand(.next) },
+                    onPrevious: { previewFindNavigation = FindCommand(.previous) },
+                    onClose: { dismissPreviewFind(refocusPreview: true) }
+                )
+            }
+        }
+    }
+
+    // MARK: Side by Side scroll synchronization
+
+    /// Editor scrolled: drive the preview to the matching source line. Ignored
+    /// while the editor is itself following the preview, so the two cannot
+    /// oscillate. The editor only reports a line, so a fresh viewport anchor is
+    /// built around it with the section-heading fallback the preview can use.
+    private func syncEditorToPreview(line: Int) {
+        guard mode == .split, splitSyncSource != .preview else { return }
+        markSyncSource(.editor)
+        focusedPane = .editor
+        let anchor = ViewportAnchor(
+            sourceLine: line,
+            scrollFraction: fraction(forLine: line, totalLines: totalLineCount),
+            fallbackHeadingID: document.rendered.outline.heading(atOrAbove: line)?.id
+        )
+        editorSyncWork?.cancel()
+        let work = DispatchWorkItem { document.previewJumpAnchor = anchor }
+        editorSyncWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: work)
+    }
+
+    /// Preview scrolled: drive the editor to the matching source line. Ignored
+    /// while the preview is itself following the editor. A heading-only anchor
+    /// is resolved to its source line here, where the outline is known.
+    private func syncPreviewToEditor(anchor: ViewportAnchor) {
+        guard mode == .split, splitSyncSource != .editor else { return }
+        markSyncSource(.preview)
+        focusedPane = .preview
+        var resolved = anchor
+        if resolved.sourceLine == nil,
+           let headingID = resolved.fallbackHeadingID,
+           let heading = document.rendered.outline.heading(forID: headingID) {
+            resolved.sourceLine = heading.line
+            resolved.sourceEndLine = nil
+            resolved.intraBlockProgress = 0
+        }
+        document.editorJumpAnchor = resolved
+    }
+
+    /// Marks `pane` as the current sync driver and arms a short cooldown. The
+    /// follower's programmatic scroll suppresses its own anchor reporting, and
+    /// this guard ignores the single settle-time report that still arrives, so a
+    /// drive in one direction cannot bounce back as a drive in the other.
+    private func markSyncSource(_ pane: SplitPane) {
+        splitSyncSource = pane
+        let token = UUID()
+        splitSyncToken = token
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            if splitSyncToken == token {
+                splitSyncSource = nil
+            }
+        }
+    }
+}
+
+/// The two surfaces of Side by Side mode.
+private enum SplitPane {
+    case editor
+    case preview
 }
 
 private struct OutlineSidebar: View {
