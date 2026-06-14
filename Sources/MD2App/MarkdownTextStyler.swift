@@ -21,6 +21,16 @@ enum MarkdownTextStyler {
         applyBlockStyles(to: storage)
         applyInlineStyles(to: storage)
         storage.endEditing()
+
+        // Re-styling the whole document shifts line positions (heading fonts are
+        // taller than body text), but lines that merely moved — without their own
+        // attributes changing — are not marked for redisplay. The caret-reveal
+        // scroll that follows a keystroke then blits those stale pixels (NSClipView
+        // always minimizes the invalidated region on macOS 11+, copying the rest),
+        // leaving ghost copies of headings stacked at the viewport edge. Forcing a
+        // full redraw guarantees the blitted pixels are overdrawn before the frame
+        // is shown, so no ghosts survive.
+        textView.needsDisplay = true
     }
 
     private static func applyBlockStyles(to storage: NSTextStorage) {
